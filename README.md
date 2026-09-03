@@ -1,2 +1,2 @@
 # DriveMate
-A Safe, Actionable, and Auditable AI Agent for Intelligent Mobility
+Intelligent Mobility Concierge for NEV Owners and Robotaxi Passengers
