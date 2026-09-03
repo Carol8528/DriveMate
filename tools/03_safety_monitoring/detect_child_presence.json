@@ -1,0 +1,35 @@
+{
+  "name": "detect_child_presence",
+  "domain": "safety_monitoring",
+  "description": "儿童座椅/后排遗留检测（读取车辆传感器状态）",
+  "safety_level": "L0",
+  "idempotent": true,
+  "requires_confirmation": false,
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "returns": {
+    "type": "object",
+    "properties": {
+      "child_detected": {
+        "type": "boolean",
+        "description": "是否检测到儿童"
+      },
+      "seat_position": {
+        "type": "string",
+        "enum": ["rear_left", "rear_right", "rear_center"],
+        "description": "儿童位置"
+      },
+      "seatbelt_fastened": {
+        "type": "boolean",
+        "description": "安全带是否系好"
+      },
+      "alone_in_vehicle": {
+        "type": "boolean",
+        "description": "是否独自留在车内"
+      }
+    }
+  }
+}

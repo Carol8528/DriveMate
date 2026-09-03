@@ -1,0 +1,17 @@
+{
+  "name": "modify_destination",
+  "domain": "robotaxi_order",
+  "description": "修改 Robotaxi 订单目的地/途经点，会改变订单与费用，需用户确认",
+  "safety_level": "L2",
+  "idempotent": false,
+  "requires_confirmation": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "destination": {"type": "string", "description": "新目的地"},
+      "waypoints": {"type": "array", "items": {"type": "string"}, "description": "新增途经点，可选"},
+      "reason": {"type": "string", "enum": ["passenger_request", "safety_concern", "travel_change"]}
+    },
+    "required": ["destination", "reason"]
+  }
+}

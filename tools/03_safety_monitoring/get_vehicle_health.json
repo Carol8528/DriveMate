@@ -1,0 +1,56 @@
+{
+  "name": "get_vehicle_health",
+  "domain": "safety_monitoring",
+  "description": "胎压、故障码、续航真实性查询（读取车辆当前状态）",
+  "safety_level": "L0",
+  "idempotent": true,
+  "requires_confirmation": false,
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "returns": {
+    "type": "object",
+    "properties": {
+      "tire_pressure": {
+        "type": "object",
+        "description": "四轮胎压（kPa）",
+        "properties": {
+          "fl": {
+            "type": "number",
+            "description": "左前轮胎压（kPa）"
+          },
+          "fr": {
+            "type": "number",
+            "description": "右前轮胎压（kPa）"
+          },
+          "rl": {
+            "type": "number",
+            "description": "左后轮胎压（kPa）"
+          },
+          "rr": {
+            "type": "number",
+            "description": "右后轮胎压（kPa）"
+          }
+        }
+      },
+      "fault_codes": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "当前故障码列表"
+      },
+      "estimated_range_km": {
+        "type": "number",
+        "description": "预估续航里程"
+      },
+      "range_accuracy": {
+        "type": "string",
+        "enum": ["high", "medium", "low"],
+        "description": "续航估算可信度"
+      }
+    }
+  }
+}

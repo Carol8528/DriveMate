@@ -1,0 +1,57 @@
+{
+  "name": "plan_route",
+  "domain": "navigation_charging",
+  "description": "导航规划（含途经点）",
+  "safety_level": "L2",
+  "idempotent": true,
+  "requires_confirmation": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "destination": {
+        "type": "string",
+        "description": "目的地名称或地址"
+      },
+      "waypoints": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "途经点列表（可选）"
+      },
+      "preference": {
+        "type": "string",
+        "enum": [
+          "fastest",
+          "shortest",
+          "avoid_toll",
+          "avoid_highway",
+          "scenic"
+        ],
+        "description": "路线偏好（可选）",
+        "default": "fastest"
+      },
+      "current_location": {
+        "type": "object",
+        "description": "当前位置（可选，默认使用车辆当前位置）",
+        "properties": {
+          "lat": {
+            "type": "number",
+            "description": "纬度"
+          },
+          "lng": {
+            "type": "number",
+            "description": "经度"
+          }
+        },
+        "required": [
+          "lat",
+          "lng"
+        ]
+      }
+    },
+    "required": [
+      "destination"
+    ]
+  }
+}

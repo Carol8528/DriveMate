@@ -1,0 +1,36 @@
+{
+  "name": "share_vehicle_location",
+  "domain": "robotaxi_order",
+  "description": "一键分享车辆位置/AR 引导找车",
+  "safety_level": "L1",
+  "idempotent": true,
+  "requires_confirmation": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "share_method": {
+        "type": "string",
+        "enum": ["link", "ar_guide", "screenshot"],
+        "description": "分享方式"
+      },
+      "recipient": {
+        "type": "string",
+        "description": "接收人联系方式（可选，默认分享给当前乘客）"
+      }
+    },
+    "required": ["share_method"]
+  },
+  "returns": {
+    "type": "object",
+    "properties": {
+      "share_link": {
+        "type": "string",
+        "description": "分享链接"
+      },
+      "ar_guide_url": {
+        "type": "string",
+        "description": "AR 引导链接（如适用）"
+      }
+    }
+  }
+}

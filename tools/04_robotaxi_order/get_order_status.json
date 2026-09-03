@@ -1,0 +1,58 @@
+{
+  "name": "get_order_status",
+  "domain": "robotaxi_order",
+  "description": "车辆实时位置、ETA、车牌查询",
+  "safety_level": "L0",
+  "idempotent": true,
+  "requires_confirmation": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "order_id": {
+        "type": "string",
+        "description": "订单 ID（可选，默认当前订单）"
+      }
+    },
+    "required": []
+  },
+  "returns": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "string",
+        "enum": ["pending", "assigned", "arriving", "arrived", "in_trip", "completed", "cancelled"],
+        "description": "订单状态"
+      },
+      "vehicle_location": {
+        "type": "object",
+        "description": "车辆位置",
+        "properties": {
+          "lat": {
+            "type": "number",
+            "description": "纬度"
+          },
+          "lng": {
+            "type": "number",
+            "description": "经度"
+          },
+          "address": {
+            "type": "string",
+            "description": "位置描述"
+          }
+        }
+      },
+      "eta_minutes": {
+        "type": "integer",
+        "description": "预计到达时间（分钟）"
+      },
+      "license_plate": {
+        "type": "string",
+        "description": "车牌号"
+      },
+      "driver_name": {
+        "type": "string",
+        "description": "司机姓名"
+      }
+    }
+  }
+}

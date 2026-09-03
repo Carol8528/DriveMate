@@ -1,0 +1,49 @@
+{
+  "name": "transfer_to_human",
+  "domain": "human_emergency",
+  "description": "转人工客服，携带对话摘要 + 状态快照，会创建客服工单，安全场景下自动转接",
+  "safety_level": "L1",
+  "idempotent": false,
+  "requires_confirmation": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "reason": {
+        "type": "string",
+        "enum": ["complex_request", "safety_concern", "complaint", "technical_issue", "passenger_request"],
+        "description": "转人工原因"
+      },
+      "priority": {
+        "type": "string",
+        "enum": ["normal", "urgent", "emergency"],
+        "description": "优先级"
+      },
+      "summary": {
+        "type": "string",
+        "description": "对话摘要（可选，Agent 自动生成）"
+      },
+      "context_snapshot": {
+        "type": "object",
+        "description": "当前状态快照（车辆/订单/环境状态）"
+      }
+    },
+    "required": ["reason", "priority", "context_snapshot"]
+  },
+  "returns": {
+    "type": "object",
+    "properties": {
+      "queue_position": {
+        "type": "integer",
+        "description": "排队位置"
+      },
+      "estimated_wait_seconds": {
+        "type": "integer",
+        "description": "预计等待时间（秒）"
+      },
+      "transfer_id": {
+        "type": "string",
+        "description": "转接 ID"
+      }
+    }
+  }
+}

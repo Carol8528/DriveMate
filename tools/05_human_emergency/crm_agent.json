@@ -1,0 +1,16 @@
+{
+  "name": "crm_agent",
+  "domain": "human_emergency",
+  "description": "客服 Agent 接管已创建的人工转接上下文，并在审计链中登记接管会话",
+  "safety_level": "L1",
+  "idempotent": false,
+  "requires_confirmation": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "skill_group": {"type": "string", "description": "客服技能组"},
+      "transfer_context": {"type": "object", "description": "转人工上下文"}
+    },
+    "required": []
+  }
+}

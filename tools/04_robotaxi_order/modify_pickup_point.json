@@ -1,0 +1,59 @@
+{
+  "name": "modify_pickup_point",
+  "domain": "robotaxi_order",
+  "description": "修改上车点（校验可停靠性，会改变订单状态，需用户确认）",
+  "safety_level": "L2",
+  "idempotent": false,
+  "requires_confirmation": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "new_location": {
+        "type": "object",
+        "description": "新上车点",
+        "properties": {
+          "lat": {
+            "type": "number",
+            "description": "纬度"
+          },
+          "lng": {
+            "type": "number",
+            "description": "经度"
+          },
+          "address": {
+            "type": "string",
+            "description": "地址描述"
+          }
+        },
+        "required": ["lat", "lng", "address"]
+      },
+      "reason": {
+        "type": "string",
+        "enum": ["passenger_request", "vehicle_unreachable", "safety_concern", "traffic_restriction"],
+        "description": "修改原因"
+      },
+      "order_id": {
+        "type": "string",
+        "description": "订单 ID（可选，默认当前订单）"
+      }
+    },
+    "required": ["new_location", "reason"]
+  },
+  "returns": {
+    "type": "object",
+    "properties": {
+      "approved": {
+        "type": "boolean",
+        "description": "是否通过校验"
+      },
+      "rejection_reason": {
+        "type": "string",
+        "description": "拒绝原因（如未通过）"
+      },
+      "new_eta_minutes": {
+        "type": "integer",
+        "description": "新 ETA（分钟）"
+      }
+    }
+  }
+}

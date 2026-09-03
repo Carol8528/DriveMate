@@ -1,0 +1,72 @@
+{
+  "name": "emergency_call",
+  "domain": "human_emergency",
+  "description": "SOS/道路救援，L3 最高优先；Demo 中必须显式确认后触发，以避免误拨。",
+  "safety_level": "L3",
+  "idempotent": false,
+  "requires_confirmation": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "emergency_type": {
+        "type": "string",
+        "enum": [
+          "medical",
+          "accident",
+          "fire",
+          "breakdown",
+          "crime",
+          "other"
+        ],
+        "description": "紧急类型"
+      },
+      "location": {
+        "type": "object",
+        "description": "当前位置（可选，默认车辆位置）",
+        "properties": {
+          "lat": {
+            "type": "number",
+            "description": "纬度"
+          },
+          "lng": {
+            "type": "number",
+            "description": "经度"
+          },
+          "address": {
+            "type": "string",
+            "description": "地址描述"
+          }
+        }
+      },
+      "callback_number": {
+        "type": "string",
+        "description": "回拨号码（可选）"
+      },
+      "auto_send_location": {
+        "type": "boolean",
+        "description": "是否自动发送位置（可选）",
+        "default": true
+      }
+    },
+    "required": [
+      "emergency_type"
+    ]
+  },
+  "returns": {
+    "type": "object",
+    "properties": {
+      "call_connected": {
+        "type": "boolean",
+        "description": "是否接通"
+      },
+      "emergency_center": {
+        "type": "string",
+        "description": "接通的救援中心"
+      },
+      "rescue_eta_minutes": {
+        "type": "integer",
+        "description": "救援预计到达时间（分钟）"
+      }
+    }
+  }
+}

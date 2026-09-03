@@ -1,0 +1,45 @@
+{
+  "name": "cancel_order",
+  "domain": "robotaxi_order",
+  "description": "取消订单（含费用试算，会改变订单状态，需用户确认）",
+  "safety_level": "L2",
+  "idempotent": false,
+  "requires_confirmation": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "order_id": {
+        "type": "string",
+        "description": "订单 ID（可选，默认当前订单）"
+      },
+      "reason": {
+        "type": "string",
+        "enum": ["passenger_initiated", "vehicle_issue", "safety_concern", "other"],
+        "description": "取消原因"
+      },
+      "force": {
+        "type": "boolean",
+        "description": "是否强制取消（跳过确认，可选）",
+        "default": false
+      }
+    },
+    "required": ["reason"]
+  },
+  "returns": {
+    "type": "object",
+    "properties": {
+      "cancelled": {
+        "type": "boolean",
+        "description": "是否取消成功"
+      },
+      "cancellation_fee": {
+        "type": "number",
+        "description": "取消费用（元）"
+      },
+      "refund_amount": {
+        "type": "number",
+        "description": "退款金额（元）"
+      }
+    }
+  }
+}

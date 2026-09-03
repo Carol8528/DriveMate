@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="500" viewBox="0 0 1200 500">
+  <defs>
+    <linearGradient id="land" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#edf4ef"/>
+      <stop offset="1" stop-color="#e4eee9"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b9dff0"/>
+      <stop offset="1" stop-color="#93c9e4"/>
+    </linearGradient>
+    <filter id="routeGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="labelShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#54718a" flood-opacity=".18"/>
+    </filter>
+    <pattern id="blocks" width="58" height="46" patternUnits="userSpaceOnUse">
+      <rect x="8" y="7" width="38" height="25" rx="4" fill="#dbe5df"/>
+      <path d="M0 40h58M52 0v46" stroke="#f8fbf9" stroke-width="5"/>
+    </pattern>
+    <clipPath id="west-bank-clip" clipPathUnits="userSpaceOnUse">
+      <path d="M0-30H1086C1027 40 1062 95 1030 141C1004 179 1004 223 1041 258C1083 298 1073 350 1019 391C981 420 980 466 1002 530H0Z"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1200" height="500" fill="url(#land)"/>
+  <rect width="1200" height="500" fill="url(#blocks)" opacity=".68"/>
+
+  <g fill="#cfe5cf" opacity=".92">
+    <path d="M86 38h190v94H86z"/>
+    <path d="M415 65h110v90H415z"/>
+    <path d="M638 304h142v105H638z"/>
+    <path d="M886 50h112v78H886z"/>
+  </g>
+  <g fill="#b7d8b9" font-family="Microsoft YaHei, sans-serif" font-size="14" fill-opacity=".92">
+    <text x="139" y="89">虹桥绿地</text>
+    <text x="435" y="112">天山公园</text>
+    <text x="669" y="359">复兴公园</text>
+    <text x="906" y="94">人民公园</text>
+  </g>
+
+  <path d="M1086-30C1027 40 1062 95 1030 141C1004 179 1004 223 1041 258C1083 298 1073 350 1019 391C981 420 980 466 1002 530H1240V-30Z" fill="url(#water)"/>
+  <path d="M1086-30C1027 40 1062 95 1030 141C1004 179 1004 223 1041 258C1083 298 1073 350 1019 391C981 420 980 466 1002 530" fill="none" stroke="#79b4d2" stroke-width="4"/>
+  <text x="1094" y="282" fill="#4f91b5" font-family="Microsoft YaHei, sans-serif" font-size="18" font-weight="700" transform="rotate(84 1094 282)">黄浦江</text>
+
+  <g id="road-network" fill="none" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#west-bank-clip)">
+    <g stroke="#fff" stroke-width="13" opacity=".96">
+      <path d="M32 430C54 423 73 410 92 401"/>
+      <path d="M92 401C175 374 257 358 350 343C438 328 487 318 557 299C639 277 695 251 748 230C825 200 899 182 965 174C974 173 982 171 988 169"/>
+      <path d="M80 318C240 302 390 277 520 239S791 153 1012 99"/>
+      <path d="M210 475C279 391 339 320 420 241S568 102 641 24"/>
+      <path d="M548 484C575 399 612 320 676 230S794 82 858-8"/>
+      <path d="M818 500C823 402 840 314 866 220S917 64 951-10"/>
+      <path d="M103 80C248 132 402 157 559 158S825 133 1034 121"/>
+    </g>
+    <g stroke="#c6d1cc" stroke-width="4">
+      <path d="M32 430C54 423 73 410 92 401"/>
+      <path id="primary-road" d="M92 401C175 374 257 358 350 343C438 328 487 318 557 299C639 277 695 251 748 230C825 200 899 182 965 174C974 173 982 171 988 169"/>
+      <path d="M80 318C240 302 390 277 520 239S791 153 1012 99"/>
+      <path d="M210 475C279 391 339 320 420 241S568 102 641 24"/>
+      <path d="M548 484C575 399 612 320 676 230S794 82 858-8"/>
+      <path d="M818 500C823 402 840 314 866 220S917 64 951-10"/>
+      <path d="M103 80C248 132 402 157 559 158S825 133 1034 121"/>
+    </g>
+    <g stroke="#d8e1dc" stroke-width="3">
+      <path d="M48 208C212 219 365 208 499 188S746 130 1009 47"/>
+      <path d="M58 268C228 260 403 236 563 199S825 134 1038 82"/>
+      <path d="M20 375C170 348 337 325 503 303S800 263 1032 207"/>
+      <path d="M119 498C170 410 234 316 303 229S445 69 503-15"/>
+      <path d="M353 516C403 423 449 335 511 248S629 89 691-12"/>
+      <path d="M698 508C712 402 736 312 777 217S858 48 892-12"/>
+      <path d="M943 494C934 398 941 313 961 228S997 67 1016-14"/>
+    </g>
+  </g>
+
+  <g font-family="Microsoft YaHei, sans-serif" font-size="13" fill="#7b8d88">
+    <text x="318" y="339" transform="rotate(-11 318 339)">延安西路</text>
+    <text x="688" y="267" transform="rotate(-18 688 267)">延安高架路</text>
+    <text x="842" y="151" transform="rotate(-14 842 151)">南京西路</text>
+    <text x="521" y="207" transform="rotate(-17 521 207)">长宁路</text>
+    <text x="674" y="188" transform="rotate(-56 674 188)">华山路</text>
+    <text x="859" y="321" transform="rotate(-76 859 321)">西藏中路</text>
+    <text x="975" y="295" transform="rotate(-80 975 295)">中山东一路</text>
+  </g>
+
+  <g id="route-layer" clip-path="url(#west-bank-clip)">
+    <path d="M92 401C175 374 257 358 350 343C438 328 487 318 557 299C639 277 695 251 748 230C825 200 899 182 965 174C974 173 982 171 988 169" fill="none" stroke="#fff" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+    <path id="primary-route" d="M92 401C175 374 257 358 350 343C438 328 487 318 557 299C639 277 695 251 748 230C825 200 899 182 965 174C974 173 982 171 988 169" fill="none" stroke="#4d7cff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" filter="url(#routeGlow)"/>
+    <path d="M92 401C175 374 257 358 350 343C438 328 487 318 557 299C639 277 695 251 748 230C825 200 899 182 965 174C974 173 982 171 988 169" fill="none" stroke="#dbe9ff" stroke-width="3" stroke-linecap="round" stroke-dasharray="7 15">
+      <animate attributeName="stroke-dashoffset" from="0" to="-44" dur="1.4s" repeatCount="indefinite"/>
+    </path>
+  </g>
+
+  <g font-family="Microsoft YaHei, sans-serif" filter="url(#labelShadow)">
+    <g transform="translate(92 401)">
+      <circle r="12" fill="#228a68" stroke="#fff" stroke-width="5"/>
+      <rect x="-28" y="18" width="146" height="34" rx="9" fill="#fff" stroke="#92bea9"/>
+      <text x="-15" y="40" fill="#263247" font-size="15" font-weight="700">上海虹桥火车站</text>
+    </g>
+    <g transform="translate(350 343)">
+      <circle r="7" fill="#4d7cff" stroke="#fff" stroke-width="4"/>
+      <rect x="-45" y="-44" width="104" height="30" rx="8" fill="#fff" stroke="#c6d4e0"/>
+      <text x="-33" y="-24" fill="#42556b" font-size="14">虹桥开发区</text>
+    </g>
+    <g transform="translate(557 299)">
+      <circle r="7" fill="#4d7cff" stroke="#fff" stroke-width="4"/>
+      <rect x="-45" y="16" width="90" height="30" rx="8" fill="#fff" stroke="#c6d4e0"/>
+      <text x="-31" y="36" fill="#42556b" font-size="14">中山公园</text>
+    </g>
+    <g transform="translate(748 230)">
+      <circle r="7" fill="#4d7cff" stroke="#fff" stroke-width="4"/>
+      <rect x="-37" y="-43" width="74" height="30" rx="8" fill="#fff" stroke="#c6d4e0"/>
+      <text x="-24" y="-23" fill="#42556b" font-size="14">静安寺</text>
+    </g>
+    <g id="people-square" transform="translate(899 182)">
+      <circle r="7" fill="#4d7cff" stroke="#fff" stroke-width="4"/>
+      <rect x="-43" y="17" width="86" height="30" rx="8" fill="#fff" stroke="#c6d4e0"/>
+      <text x="-30" y="37" fill="#42556b" font-size="14">人民广场</text>
+    </g>
+    <g transform="translate(965 174)">
+      <circle r="7" fill="#4d7cff" stroke="#fff" stroke-width="4"/>
+      <rect x="-73" y="-48" width="94" height="30" rx="8" fill="#fff" stroke="#c6d4e0"/>
+      <text x="-60" y="-28" fill="#42556b" font-size="14">南京东路</text>
+    </g>
+    <g id="bund-destination" data-zone="west-bank" transform="translate(988 169)">
+      <g transform="translate(0 -32)">
+        <path d="M0-16c10 0 18 8 18 18 0 14-18 30-18 30S-18 16-18 2c0-10 8-18 18-18Z" fill="#cf5f3c" stroke="#fff" stroke-width="5"/>
+        <circle cy="2" r="6" fill="#fff"/>
+      </g>
+      <rect x="26" y="-47" width="112" height="34" rx="9" fill="#fff" stroke="#e0b09f"/>
+      <text x="41" y="-25" fill="#263247" font-size="15" font-weight="700">上海外滩</text>
+    </g>
+  </g>
+
+  <g transform="translate(34 28)" font-family="Microsoft YaHei, sans-serif">
+    <rect width="230" height="38" rx="12" fill="#fff" fill-opacity=".9" stroke="#c8d9d2"/>
+    <circle cx="21" cy="19" r="6" fill="#228a68"/>
+    <text x="37" y="24" fill="#263247" font-size="14" font-weight="700">实时路况 · 延安高架畅通</text>
+  </g>
+  <g transform="translate(1016 444)" font-family="Microsoft YaHei, sans-serif">
+    <path d="M0 0h106" stroke="#52687c" stroke-width="3"/>
+    <path d="M0-5v10M106-5v10" stroke="#52687c" stroke-width="3"/>
+    <text x="31" y="-10" fill="#52687c" font-size="12">约 5 km</text>
+  </g>
+</svg>

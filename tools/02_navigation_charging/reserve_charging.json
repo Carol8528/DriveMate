@@ -1,0 +1,31 @@
+{
+  "name": "reserve_charging",
+  "domain": "navigation_charging",
+  "description": "充电桩预约/即插即充启动（预约会占用资源，需用户确认）",
+  "safety_level": "L2",
+  "idempotent": false,
+  "requires_confirmation": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "station_id": {
+        "type": "string",
+        "description": "充电站 ID"
+      },
+      "pile_id": {
+        "type": "string",
+        "description": "充电桩 ID（可选，不指定则自动分配）"
+      },
+      "start_time": {
+        "type": "string",
+        "format": "date-time",
+        "description": "预约开始时间（ISO 8601 格式，可选，立即充电可不填）"
+      },
+      "duration_min": {
+        "type": "integer",
+        "description": "预计充电时长（分钟，可选）"
+      }
+    },
+    "required": ["station_id"]
+  }
+}

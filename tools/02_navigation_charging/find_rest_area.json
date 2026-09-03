@@ -1,0 +1,38 @@
+{
+  "name": "find_rest_area",
+  "domain": "navigation_charging",
+  "description": "最近服务区/休息点查询（疲劳驾驶用）",
+  "safety_level": "L0",
+  "idempotent": true,
+  "requires_confirmation": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "radius_km": {
+        "type": "integer",
+        "description": "搜索半径（km，可选）",
+        "default": 50
+      },
+      "along_route": {
+        "type": "boolean",
+        "description": "是否沿当前路线查找（可选）",
+        "default": true
+      },
+      "facilities": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "parking",
+            "restroom",
+            "food",
+            "gas",
+            "charging"
+          ]
+        },
+        "description": "所需设施（可选）"
+      }
+    },
+    "required": []
+  }
+}

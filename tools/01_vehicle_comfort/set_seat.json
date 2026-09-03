@@ -1,0 +1,48 @@
+{
+  "name": "set_seat",
+  "domain": "vehicle_comfort",
+  "description": "座椅加热/通风/按摩/角度调节",
+  "safety_level": "L1",
+  "idempotent": true,
+  "requires_confirmation": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "seat_position": {
+        "type": "string",
+        "enum": ["driver", "passenger", "rear_left", "rear_right"],
+        "description": "座椅位置"
+      },
+      "mode": {
+        "type": "string",
+        "enum": ["heat", "vent", "massage", "position", "off"],
+        "description": "座椅功能模式"
+      },
+      "intensity": {
+        "type": "integer",
+        "description": "强度档位（1-3，按摩/加热/通风用）",
+        "minimum": 1,
+        "maximum": 3
+      },
+      "angle": {
+        "type": "object",
+        "description": "座椅角度（可选，position 模式用）",
+        "properties": {
+          "backrest": {
+            "type": "number",
+            "description": "靠背角度"
+          },
+          "cushion": {
+            "type": "number",
+            "description": "坐垫角度"
+          },
+          "lumbar": {
+            "type": "number",
+            "description": "腰托位置"
+          }
+        }
+      }
+    },
+    "required": ["seat_position", "mode"]
+  }
+}

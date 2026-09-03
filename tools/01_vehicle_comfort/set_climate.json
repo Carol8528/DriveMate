@@ -1,0 +1,38 @@
+{
+  "name": "set_climate",
+  "domain": "vehicle_comfort",
+  "description": "空调温度/风量/模式控制",
+  "safety_level": "L1",
+  "idempotent": true,
+  "requires_confirmation": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "temperature": {
+        "type": "number",
+        "description": "目标温度（摄氏度）",
+        "minimum": 16,
+        "maximum": 30
+      },
+      "fan_speed": {
+        "type": "integer",
+        "description": "风量档位（1-5）",
+        "minimum": 1,
+        "maximum": 5
+      },
+      "zone": {
+        "type": "string",
+        "enum": ["driver", "passenger", "rear", "all"],
+        "description": "空调区域",
+        "default": "all"
+      },
+      "mode": {
+        "type": "string",
+        "enum": ["cool", "heat", "vent", "auto", "off"],
+        "description": "空调模式",
+        "default": "auto"
+      }
+    },
+    "required": []
+  }
+}

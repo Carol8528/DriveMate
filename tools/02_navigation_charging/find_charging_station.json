@@ -1,0 +1,41 @@
+{
+  "name": "find_charging_station",
+  "domain": "navigation_charging",
+  "description": "沿途充电桩查询（空闲/功率/价格）",
+  "safety_level": "L0",
+  "idempotent": true,
+  "requires_confirmation": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "along_route": {
+        "type": "boolean",
+        "description": "是否沿当前路线查找（true）或附近查找（false）"
+      },
+      "power_min": {
+        "type": "integer",
+        "description": "最小充电功率要求（kW，可选）"
+      },
+      "connector_type": {
+        "type": "string",
+        "enum": [
+          "gb_t",
+          "ccs",
+          "chademo"
+        ],
+        "description": "连接器类型（可选）"
+      },
+      "price_max": {
+        "type": "number",
+        "description": "最高单价限制（元/kWh，可选）"
+      },
+      "distance_max": {
+        "type": "integer",
+        "description": "最大搜索距离（km，可选）"
+      }
+    },
+    "required": [
+      "along_route"
+    ]
+  }
+}

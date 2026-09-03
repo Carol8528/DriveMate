@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "sample_id": "demo-multimodal-001",
+  "captured_at": "2026-09-03T01:00:00Z",
+  "source": "competition_demo_fixture",
+  "simulated": true,
+  "modalities": [
+    {"type": "dms", "fatigue_score": 0.72, "confidence": 0.91},
+    {"type": "voice", "intent_hint": "fatigue", "confidence": 0.86},
+    {"type": "vehicle_bus", "speed_kmh": 80, "driving_hours": 3.5}
+  ],
+  "notice": "可复现的演示输入文件，不是量产车辆实采数据。"
+}

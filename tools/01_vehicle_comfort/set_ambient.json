@@ -1,0 +1,35 @@
+{
+  "name": "set_ambient",
+  "domain": "vehicle_comfort",
+  "description": "氛围灯/香氛/小憩模式设置",
+  "safety_level": "L1",
+  "idempotent": true,
+  "requires_confirmation": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "scene": {
+        "type": "string",
+        "enum": ["relax", "focus", "sleep", "party", "romantic", "off"],
+        "description": "场景模式"
+      },
+      "light_color": {
+        "type": "string",
+        "description": "氛围灯颜色（hex 格式，可选）",
+        "pattern": "^#[0-9a-fA-F]{6}$"
+      },
+      "light_brightness": {
+        "type": "integer",
+        "description": "亮度（0-100，可选）",
+        "minimum": 0,
+        "maximum": 100
+      },
+      "fragrance": {
+        "type": "string",
+        "enum": ["lavender", "ocean", "forest", "none"],
+        "description": "香氛类型（可选）"
+      }
+    },
+    "required": ["scene"]
+  }
+}

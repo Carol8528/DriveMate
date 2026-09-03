@@ -1,0 +1,29 @@
+{
+  "name": "contact_vehicle",
+  "domain": "robotaxi_order",
+  "description": "远程闪灯鸣笛（会产生物理动作，需用户确认）",
+  "safety_level": "L2",
+  "idempotent": false,
+  "requires_confirmation": true,
+  "constraints": "仅在车辆距离乘客 100 米内可用",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": ["flash_light", "honk", "both"],
+        "description": "动作类型"
+      },
+      "duration_seconds": {
+        "type": "integer",
+        "description": "持续时间（秒，可选）",
+        "default": 3
+      },
+      "order_id": {
+        "type": "string",
+        "description": "订单 ID（可选，默认当前订单）"
+      }
+    },
+    "required": ["action"]
+  }
+}

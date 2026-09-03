@@ -1,0 +1,52 @@
+{
+  "name": "report_issue",
+  "domain": "robotaxi_order",
+  "description": "乘客求助（车内异常/遗留物品），会创建工单，紧急情况下自动提交",
+  "safety_level": "L3",
+  "idempotent": false,
+  "requires_confirmation": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "issue_type": {
+        "type": "string",
+        "enum": ["safety_concern", "left_behind_item", "vehicle_damage", "driver_behavior", "other"],
+        "description": "问题类型"
+      },
+      "description": {
+        "type": "string",
+        "description": "问题描述"
+      },
+      "urgency": {
+        "type": "string",
+        "enum": ["low", "medium", "high", "emergency"],
+        "description": "紧急程度"
+      },
+      "evidence_photos": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "证据照片 URL（可选）"
+      }
+    },
+    "required": ["issue_type", "description", "urgency"]
+  },
+  "returns": {
+    "type": "object",
+    "properties": {
+      "ticket_id": {
+        "type": "string",
+        "description": "工单 ID"
+      },
+      "estimated_response_time": {
+        "type": "integer",
+        "description": "预计响应时间（分钟）"
+      },
+      "immediate_action": {
+        "type": "string",
+        "description": "即时建议动作"
+      }
+    }
+  }
+}

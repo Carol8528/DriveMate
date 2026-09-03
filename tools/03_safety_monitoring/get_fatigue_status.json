@@ -1,0 +1,35 @@
+{
+  "name": "get_fatigue_status",
+  "domain": "safety_monitoring",
+  "description": "DMS 疲劳指数、连续驾驶时长查询（读取车辆当前状态）",
+  "safety_level": "L0",
+  "idempotent": true,
+  "requires_confirmation": false,
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "returns": {
+    "type": "object",
+    "properties": {
+      "fatigue_level": {
+        "type": "string",
+        "enum": ["low", "medium", "high", "severe"],
+        "description": "疲劳等级"
+      },
+      "continuous_drive_minutes": {
+        "type": "integer",
+        "description": "连续驾驶时长（分钟）"
+      },
+      "eye_closure_duration": {
+        "type": "number",
+        "description": "最近闭眼时长（秒）"
+      },
+      "head_pose_alert_count": {
+        "type": "integer",
+        "description": "头部姿态异常次数"
+      }
+    }
+  }
+}

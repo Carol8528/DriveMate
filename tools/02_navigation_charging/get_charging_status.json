@@ -1,0 +1,39 @@
+{
+  "name": "get_charging_status",
+  "domain": "navigation_charging",
+  "description": "充电进度/预估完成时间查询",
+  "safety_level": "L0",
+  "idempotent": true,
+  "requires_confirmation": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "session_id": {
+        "type": "string",
+        "description": "充电会话 ID"
+      }
+    },
+    "required": ["session_id"]
+  },
+  "returns": {
+    "type": "object",
+    "properties": {
+      "current_power": {
+        "type": "number",
+        "description": "当前充电功率（kW）"
+      },
+      "battery_percent": {
+        "type": "number",
+        "description": "当前电量百分比"
+      },
+      "estimated_complete_time": {
+        "type": "string",
+        "description": "预估完成时间"
+      },
+      "cost_so_far": {
+        "type": "number",
+        "description": "已产生费用"
+      }
+    }
+  }
+}

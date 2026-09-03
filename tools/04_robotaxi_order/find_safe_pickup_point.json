@@ -1,0 +1,15 @@
+{
+  "name": "find_safe_pickup_point",
+  "domain": "robotaxi_order",
+  "description": "根据当前订单与道路策略快照寻找安全合规的替代上车点；只查询，不修改订单",
+  "safety_level": "L0",
+  "idempotent": true,
+  "requires_confirmation": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "max_walk_m": {"type": "integer", "minimum": 50, "maximum": 1000, "description": "乘客最大步行距离"}
+    },
+    "required": []
+  }
+}

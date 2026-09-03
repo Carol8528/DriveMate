@@ -1,0 +1,67 @@
+{
+  "name": "suggest_safety_action",
+  "domain": "safety_monitoring",
+  "description": "生成安全建议（靠边休息/接管提醒），L3 强提示",
+  "safety_level": "L3",
+  "idempotent": true,
+  "requires_confirmation": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "risk_type": {
+        "type": "string",
+        "enum": ["fatigue", "distraction", "health_emergency", "child_safety", "vehicle_fault"],
+        "description": "风险类型"
+      },
+      "severity": {
+        "type": "string",
+        "enum": ["low", "medium", "high", "critical"],
+        "description": "严重程度"
+      },
+      "current_context": {
+        "type": "object",
+        "description": "当前上下文",
+        "properties": {
+          "speed": {
+            "type": "number",
+            "description": "当前车速（km/h）"
+          },
+          "location": {
+            "type": "string",
+            "description": "当前位置描述"
+          },
+          "road_type": {
+            "type": "string",
+            "description": "道路类型（如高速/城区/乡村）"
+          }
+        }
+      }
+    },
+    "required": ["risk_type", "severity", "current_context"]
+  },
+  "returns": {
+    "type": "object",
+    "properties": {
+      "suggested_action": {
+        "type": "string",
+        "description": "建议动作描述"
+      },
+      "urgency_level": {
+        "type": "string",
+        "enum": ["suggest", "recommend", "require", "emergency"],
+        "description": "紧急程度"
+      },
+      "auto_execute": {
+        "type": "boolean",
+        "description": "是否可自动执行"
+      },
+      "required_tools": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "需要调用的工具列表"
+      }
+    }
+  }
+}
