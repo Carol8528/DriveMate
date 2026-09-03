@@ -1,6 +1,6 @@
-# DriveMate V8 复赛提交版
+# DriveMate
 
-V8 将 **V6 的可审计决策后端** 与 **V7 的新版 Streamlit 前端** 合并为一套可独立运行的全栈演示。默认通过真实本地 REST 接口联调，不再以 Mock 数据冒充后端执行。
+面向新能源车主与 Robotaxi 乘客的智能出行 Agent
 
 ## 目标用户与核心痛点
 
