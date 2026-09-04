@@ -40,6 +40,10 @@ const modalityIcons = {
   position: "⌖",
   environment: "◎",
 };
+
+function nonEmptyList(value, fallback) {
+  return Array.isArray(value) && value.length > 0 ? value : fallback;
+}
 const riskLabels = {
   L0: "低风险",
   L1: "需要关注",
@@ -426,7 +430,7 @@ function Control({ vehicle, setVehicle }) {
 }
 function Perception({ run }) {
   const fusion = run?.perception_fusion;
-  const items = fusion?.modalities || [
+  const items = nonEmptyList(fusion?.modalities, [
     {
       label: "驾驶员监测",
       source: "DMS-01",
@@ -459,7 +463,7 @@ function Perception({ run }) {
       confidence: 94,
       contribution: 22,
     },
-  ];
+  ]);
   return (
     <div className="view">
       <ViewHead
@@ -606,9 +610,18 @@ function Safety({ run, vehicle }) {
         ? "执行完成"
         : "已有返回";
   const evidenceGroups = [
-    ["风险依据", run?.risk_reasons || ["当前未检测到高风险触发信号"]],
-    ["策略约束", run?.policies_hit || ["车辆动作须经过安全策略校验"]],
-    ["验证证据", run?.evidence || ["等待任务执行后的状态回读"]],
+    [
+      "风险依据",
+      nonEmptyList(run?.risk_reasons, ["当前未检测到高风险触发信号"]),
+    ],
+    [
+      "策略约束",
+      nonEmptyList(run?.policies_hit, ["车辆动作须经过安全策略校验"]),
+    ],
+    [
+      "验证证据",
+      nonEmptyList(run?.evidence, ["等待任务执行后的状态回读"]),
+    ],
   ];
   return (
     <div className="view">

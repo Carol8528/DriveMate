@@ -34,6 +34,19 @@ class WebFrontendContractTests(unittest.TestCase):
         self.assertIn(">外接模型</button>", self.compact_app)
         self.assertNotIn(">百炼应用</button>", self.compact_app)
 
+    def test_empty_backend_lists_render_waiting_content(self):
+        self.assertIn(
+            "functionnonEmptyList(value,fallback){returnArray.isArray(value)&&value.length>0?value:fallback;}",
+            self.compact_app,
+        )
+        for expression in (
+            "nonEmptyList(fusion?.modalities",
+            "nonEmptyList(run?.risk_reasons",
+            "nonEmptyList(run?.policies_hit",
+            "nonEmptyList(run?.evidence",
+        ):
+            self.assertIn(expression, self.compact_app)
+
     def test_chat_scrolls_to_latest_content(self):
         self.assertIn('ref={threadRef}', self.compact_app)
         self.assertIn('thread.scrollTo({top:thread.scrollHeight,behavior:"smooth"})', self.compact_app)
