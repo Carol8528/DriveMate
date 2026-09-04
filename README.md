@@ -48,11 +48,7 @@ Agent REST API（backend_server.py）
 
 ### 打开前端页面
 
-在 Windows 中打开 PowerShell，进入项目根目录：
-
-```powershell
-cd "D:\CloudSync\人生无限\02_工作与事业\05_副业\GOAI\复赛\V9"
-```
+在 Windows 中打开 PowerShell，进入项目根目录
 
 首次运行时安装 Python 和前端依赖：
 
