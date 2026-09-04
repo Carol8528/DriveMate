@@ -818,7 +818,22 @@ function Chat({
   setEngine,
 }) {
   const [input, setInput] = useState("");
+  const threadRef = useRef(null);
   const actions = mode === "owner" ? ownerActions : taxiActions;
+  useEffect(() => {
+    const thread = threadRef.current;
+    if (!thread) return;
+    const frame = requestAnimationFrame(() => {
+      thread.scrollTo({ top: thread.scrollHeight, behavior: "smooth" });
+      if (thread.scrollHeight <= thread.clientHeight) {
+        thread.closest(".chat")?.scrollIntoView({
+          behavior: "smooth",
+          block: "end",
+        });
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [messages, busy, run?.pending_tools?.length]);
   const submit = (text = input) => {
     if (!text.trim() || busy) return;
     send(text.trim());
@@ -852,7 +867,7 @@ function Chat({
           </button>
         ))}
       </div>
-      <div className="thread">
+      <div className="thread" ref={threadRef}>
         {messages.length === 0 && (
           <div className="assistant bubble">
             你好，我是 DriveMate。告诉我你的出行或座舱需求。
@@ -920,9 +935,9 @@ function Chat({
             <button
               className={engine === "百炼应用（App API）" ? "active" : ""}
               onClick={() => setEngine("百炼应用（App API）")}
-              title="百炼应用（App API）"
+              title="外接模型"
             >
-              百炼应用
+              外接模型
             </button>
           </div>
           <button onClick={() => submit()} disabled={busy}>

@@ -30,6 +30,17 @@ class WebFrontendContractTests(unittest.TestCase):
         for term in ("Enter", "SpeechRecognition", "speechSynthesis", "pending_tools", "api.confirm", "api.cancel", "api.audit", "state_diff"):
             self.assertIn(term, self.compact_app)
 
+    def test_external_engine_uses_user_facing_label(self):
+        self.assertIn(">外接模型</button>", self.compact_app)
+        self.assertNotIn(">百炼应用</button>", self.compact_app)
+
+    def test_chat_scrolls_to_latest_content(self):
+        self.assertIn('ref={threadRef}', self.compact_app)
+        self.assertIn('thread.scrollTo({top:thread.scrollHeight,behavior:"smooth"})', self.compact_app)
+        self.assertIn('thread.closest(".chat")?.scrollIntoView({', self.compact_app)
+        self.assertIn('block:"end"', self.compact_app)
+        self.assertIn('[messages,busy,run?.pending_tools?.length]', self.compact_app)
+
     def test_target_desktop_is_single_screen(self):
         self.assertIn("height:100dvh", self.compact_css)
         self.assertIn("grid-template-columns:30fr45fr25fr", self.compact_css)

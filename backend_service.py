@@ -23,7 +23,7 @@ from components.audit_store import (
 )
 from components.config import SETTINGS
 from components.confirmation_grant import make_grant
-from components.constraint_shield import tool_allowed_for_intent
+from components.constraint_shield import plan_candidates, tool_allowed_for_intent
 from components.intent_graph import resolve_intent
 from components.knowledge_retriever import retrieve_knowledge
 from components.rule_engine import RISK_ORDER, run_rule
@@ -524,20 +524,56 @@ class AgentRunService:
                 )
                 continue
             parsed = self._parse_agent_json(str(output.get("text") or ""))
-            return self._normalize_bailian_result(
+            normalized = self._normalize_bailian_result(
                 parsed,
                 str(output.get("text") or ""),
                 calls,
                 pending,
                 resolution,
             )
+            return self._enforce_bailian_safety_plan(
+                normalized, message, mode, snapshot, executor, resolution
+            )
 
-        return self._normalize_bailian_result(
+        normalized = self._normalize_bailian_result(
             None,
             "已达到最大推理轮次，请简化请求或转人工。",
             calls,
             pending,
             resolution,
+        )
+        return self._enforce_bailian_safety_plan(
+            normalized, message, mode, snapshot, executor, resolution
+        )
+
+    def _enforce_bailian_safety_plan(
+        self,
+        result: JsonObject,
+        message: str,
+        mode: str,
+        snapshot: JsonObject,
+        executor: ToolExecutor,
+        resolution: JsonObject,
+    ) -> JsonObject:
+        """Fail closed when a high-risk external response has no local tool trace."""
+        if result.get("pending_tools"):
+            return result
+        has_local_trace = any(
+            isinstance(call, dict) and call.get("tool") in self.tool_meta
+            for call in result.get("calls", [])
+        )
+        shield = plan_candidates(
+            str(resolution.get("selected") or ""), message, snapshot, mode
+        )
+        if has_local_trace or RISK_ORDER.get(str(shield.get("risk_level")), 0) < 2:
+            return result
+        return run_rule(
+            message,
+            mode,
+            snapshot,
+            executor=executor,
+            tool_meta=self.tool_meta,
+            intent_resolution=resolution,
         )
 
     def _confirm_bailian(
