@@ -4,6 +4,7 @@
 |---|---|
 | [architecture.md](architecture.md) | V8 服务边界、运行生命周期与数据边界 |
 | [design.md](design.md) | V7/V8 前端设计规范与验收基线 |
+| [data-source-and-compliance.md](data-source-and-compliance.md) | 数据类型、来源、授权、脱敏、隐私、行业风险与专业决策边界 |
 | [github-upload-checklist.md](github-upload-checklist.md) | 仓库整理结果和 GitHub 上传前检查项 |
 | [archive/reviewer-optimization-v5.md](archive/reviewer-optimization-v5.md) | V5 阶段评审优化记录，仅作历史参考 |
 
