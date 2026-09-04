@@ -1,0 +1,1166 @@
+:root {
+  font-family: "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+  color: #203047;
+  background: #edf6fb;
+  font-synthesis: none;
+  --bg: #edf6fb;
+  --panel: rgba(255, 255, 255, 0.62);
+  --card: rgba(255, 255, 255, 0.58);
+  --solid-card: #fff;
+  --text: #203047;
+  --muted: #6c7b90;
+  --line: rgba(69, 101, 137, 0.16);
+  --accent: #4778f5;
+  --accent-text: #fff;
+  --success: #1f8a68;
+  --warning: #a96812;
+  --danger: #c83f54;
+  --shadow: 0 14px 38px rgba(43, 76, 113, 0.12);
+  --r: 18px;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}
+main {
+  height: 100dvh;
+  padding: 12px;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 8% 4%, #fff 0, transparent 30%),
+    linear-gradient(135deg, var(--bg), #f8fcff 54%, #e7f3fa);
+  overflow: hidden;
+}
+main[data-theme="dark"] {
+  --bg: #101826;
+  --panel: rgba(14, 24, 40, 0.85);
+  --card: rgba(25, 40, 62, 0.76);
+  --solid-card: #17263b;
+  --text: #eef5ff;
+  --muted: #9aabc2;
+  --line: rgba(155, 186, 226, 0.17);
+  --accent: #7fb2ff;
+  --accent-text: #102038;
+  --shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #101826, #172a42 55%, #09111d);
+}
+.topbar {
+  height: 54px;
+  display: grid;
+  grid-template-columns: 30fr 45fr 25fr;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+}
+.topbar-right {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.brand,
+.connection {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.brand img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+.brand div,
+.connection div {
+  display: flex;
+  flex-direction: column;
+}
+.brand strong {
+  font-size: 18px;
+}
+.brand span,
+.connection span,
+.panel-head span,
+.panel-head small,
+.view-head span,
+.view-head p,
+.view-head small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: min(100%, 310px);
+  justify-self: center;
+  padding: 3px;
+  background: rgba(71, 120, 245, 0.08);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.switch button,
+.theme,
+.tabs button,
+.quick button,
+.secondary {
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+.switch button.active,
+.tabs button.active {
+  color: var(--accent-text);
+  background: var(--accent);
+}
+.theme {
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+.connection {
+  justify-content: flex-end;
+}
+.connection i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+.connection i.ok {
+  background: var(--success);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--success) 14%, transparent);
+}
+.connection strong {
+  font-size: 12px;
+}
+.workspace {
+  height: calc(100dvh - 86px);
+  display: grid;
+  grid-template-columns: 30fr 45fr 25fr;
+  gap: 12px;
+}
+.panel {
+  min-width: 0;
+  min-height: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+.panel-head {
+  height: 39px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.panel-head h2 {
+  font-size: 18px;
+  margin: 1px 0;
+}
+.panel-head small {
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+}
+.command > .panel-head {
+  height: 54px;
+}
+.chat > .panel-head {
+  height: 48px;
+  justify-content: flex-start;
+  align-items: flex-end;
+  gap: 8px;
+}
+.cockpit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.road {
+  position: relative;
+  min-height: 210px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 42px 14px 0;
+  color: white;
+  border-radius: 14px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(9, 25, 42, 0.12), rgba(9, 25, 42, 0.78)),
+    url("/assets/figma-hmi/cockpit-road-static-v1.webp") center/cover;
+  margin-top: 6px;
+}
+.road > span {
+  position: absolute;
+  top: 10px;
+  left: 11px;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+.speed-gauge {
+  position: absolute;
+  z-index: 2;
+  top: 18px;
+  right: 14px;
+  width: 104px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 220deg,
+    #7fb2ff 0 var(--gauge),
+    rgba(255, 255, 255, 0.22) var(--gauge) 72%,
+    transparent 72%
+  );
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.35));
+}
+.speed-gauge::before {
+  position: absolute;
+  inset: 8px;
+  content: "";
+  border-radius: 50%;
+  background: rgba(9, 25, 42, 0.74);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+}
+.speed-gauge > div {
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
+.speed-gauge strong {
+  font-size: 34px;
+  line-height: 0.9;
+  text-shadow: 0 2px 12px #000;
+}
+.speed-gauge small,
+.speed-gauge p {
+  margin: 3px 0 0;
+  font-size: 9px;
+}
+.drive-indicators {
+  position: absolute;
+  z-index: 2;
+  left: 11px;
+  bottom: 10px;
+  display: flex;
+  gap: 5px;
+}
+.drive-indicators span {
+  padding: 4px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 99px;
+  background: rgba(9, 25, 42, 0.62);
+  font-size: 8px;
+  backdrop-filter: blur(5px);
+}
+.drive-indicators i {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: #54d3aa;
+  box-shadow: 0 0 6px #54d3aa;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+.metrics.three {
+  grid-template-columns: repeat(3, 1fr);
+}
+.metric,
+.cabin-state > div,
+.sensor,
+.control,
+.result-card,
+.decision,
+.order,
+.notice,
+.empty,
+.audit {
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--card);
+}
+.metric {
+  display: flex;
+  flex-direction: column;
+}
+.metric span,
+.cabin-state span,
+.sensor span,
+.control span,
+.result-card span,
+.decision span,
+.order span {
+  font-size: 10px;
+  color: var(--muted);
+}
+.metric strong {
+  font-size: 20px;
+}
+.metric strong small {
+  font-size: 10px;
+  font-weight: 400;
+}
+.cabin-state {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+.cabin-state > div {
+  display: flex;
+  flex-direction: column;
+}
+.cabin-state strong {
+  font-size: 12px;
+}
+.order strong {
+  display: block;
+  margin: 3px 0;
+}
+.order p {
+  font-size: 10px;
+  margin: 3px 0;
+  color: var(--muted);
+}
+.command {
+  display: flex;
+  flex-direction: column;
+}
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  padding: 3px;
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--solid-card);
+  margin-top: 4px;
+}
+.tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 7px 3px;
+  font-size: 10px;
+  border: 1px solid transparent;
+}
+.tabs button i {
+  width: 15px;
+  height: 15px;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  font-size: 11px;
+  font-style: normal;
+}
+.tabs button.active i {
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent-text) 14%, transparent);
+}
+.view {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: auto;
+}
+.view-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.view-head h3 {
+  margin: 2px 0;
+  font-size: 17px;
+}
+.view-head p {
+  margin: 0;
+}
+.view-head small {
+  padding: 4px 8px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--success) 11%, transparent);
+  color: var(--success);
+}
+.route-map {
+  position: relative;
+  min-height: 210px;
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--card) url("/assets/figma-hmi/shanghai-route-map.svg")
+    center/cover;
+  overflow: hidden;
+}
+.route-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.route-info label {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 9px;
+  color: var(--muted);
+}
+.route-info strong,
+.route-info input {
+  margin-top: 3px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+.route-info input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+}
+.notice {
+  font-size: 11px;
+  color: var(--muted);
+}
+.control-grid,
+.sensor-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+}
+.control > span {
+  display: flex;
+  justify-content: space-between;
+}
+.control strong {
+  color: var(--text);
+  font-size: 16px;
+}
+.control input {
+  accent-color: var(--accent);
+}
+.sensor {
+  min-height: 104px;
+}
+.sensor header,
+.sensor footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sensor header small,
+.sensor footer small,
+.sensor footer span {
+  font-size: 9px;
+  color: var(--muted);
+}
+.sensor-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sensor-label i {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 11%, transparent);
+  font-size: 13px;
+  font-style: normal;
+}
+.sensor strong {
+  display: block;
+  margin: 7px 0;
+  font-size: 12px;
+}
+.sensor div {
+  height: 5px;
+  border-radius: 9px;
+  background: var(--line);
+  overflow: hidden;
+}
+.sensor div i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.sensor small {
+  font-size: 9px;
+  color: var(--muted);
+}
+.fusion-pipeline {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+}
+.fusion-pipeline span {
+  white-space: nowrap;
+  font-size: 9px;
+  color: var(--muted);
+}
+.fusion-pipeline i {
+  flex: 1;
+  height: 1px;
+  background: var(--accent);
+}
+.fusion-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+}
+.fusion-summary .metric {
+  padding: 7px 9px;
+}
+.fusion-summary .metric strong {
+  font-size: 15px;
+}
+.decision {
+  margin-top: auto;
+}
+.decision strong,
+.result-card strong {
+  display: block;
+  margin: 5px 0;
+  font-size: 14px;
+}
+.decision p,
+.result-card p {
+  margin: 3px 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.phases {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+.phases span {
+  padding: 7px 2px;
+  text-align: center;
+  font-size: 9px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.phases span.done {
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 35%, var(--line));
+  background: color-mix(in srgb, var(--success) 9%, transparent);
+}
+.steps,
+.memory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.steps li,
+.memory-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--card);
+}
+.steps i,
+.memory-list i {
+  font-style: normal;
+  font-size: 9px;
+  color: var(--accent);
+}
+.steps div {
+  display: flex;
+  flex: 1;
+  justify-content: space-between;
+}
+.steps strong,
+.steps span,
+.memory-list span {
+  font-size: 10px;
+}
+.audit summary {
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+}
+.audit > div {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 9px;
+}
+.audit button {
+  margin-top: 7px;
+}
+.safety-console {
+  --risk-tone: var(--success);
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+.safety-console.L1,
+.safety-console.L2 {
+  --risk-tone: var(--warning);
+}
+.safety-console.L3 {
+  --risk-tone: var(--danger);
+}
+.safety-stage {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+.safety-halo {
+  width: 126px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 220deg,
+    var(--line) 0 14%,
+    var(--risk-tone) 14% 82%,
+    var(--line) 82%
+  );
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--risk-tone) 18%, transparent);
+}
+.safety-halo > div {
+  width: 102px;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  border-radius: 50%;
+  background: var(--solid-card);
+}
+.safety-halo span,
+.safety-halo em,
+.safety-support span,
+.safety-support p,
+.safety-evidence span {
+  color: var(--muted);
+  font-size: 9px;
+  font-style: normal;
+}
+.safety-halo strong {
+  font-size: 32px;
+  line-height: 1;
+}
+.safety-support {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+.safety-support section,
+.safety-evidence section {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--solid-card);
+}
+.safety-support strong {
+  display: block;
+  margin: 5px 0;
+  font-size: 12px;
+}
+.safety-support strong small {
+  font-size: 9px;
+  font-weight: 400;
+}
+.safety-support p {
+  margin: 4px 0;
+}
+.scene-signals,
+.safety-phases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.scene-signals i,
+.safety-phases span {
+  padding: 3px 5px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  color: var(--muted);
+  background: var(--card);
+  font-size: 8px;
+  font-style: normal;
+}
+.safety-progress {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--line);
+}
+.safety-progress i {
+  display: block;
+  height: 100%;
+  background: var(--risk-tone);
+}
+.safety-phases {
+  margin-top: 8px;
+  justify-content: center;
+}
+.safety-phases span.done {
+  color: var(--risk-tone);
+  border-color: color-mix(in srgb, var(--risk-tone) 40%, var(--line));
+}
+.safety-evidence {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+.safety-evidence ul {
+  margin: 5px 0 0;
+  padding-left: 14px;
+}
+.safety-evidence li {
+  margin: 3px 0;
+  color: var(--text);
+  font-size: 9px;
+  line-height: 1.35;
+}
+.safety-verdict {
+  margin-top: 0;
+}
+.empty {
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  flex: 1;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+}
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.quick {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+.quick button {
+  padding: 7px 3px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 9px;
+  color: var(--text);
+}
+.thread {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--solid-card);
+  overflow: auto;
+}
+.bubble {
+  max-width: 90%;
+  padding: 8px 10px;
+  border-radius: 11px;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.bubble.assistant {
+  position: relative;
+  margin-left: 30px;
+  align-self: flex-start;
+  color: var(--text);
+  background: var(--solid-card);
+  border: 1px solid var(--line);
+}
+.bubble.assistant::before {
+  position: absolute;
+  top: 1px;
+  left: -31px;
+  width: 24px;
+  height: 24px;
+  content: "";
+  background: url("/assets/figma-hmi/drivemate-logo-transparent-colorlocked.png")
+    center/contain no-repeat;
+}
+.bubble.user {
+  position: relative;
+  margin-right: 30px;
+  align-self: flex-end;
+  color: white;
+  background: var(--accent);
+}
+.bubble.user::after {
+  position: absolute;
+  top: 1px;
+  right: -31px;
+  width: 24px;
+  height: 24px;
+  content: "";
+  background: url("/assets/figma-hmi/user-avatar-v4-transparent.png")
+    center/contain no-repeat;
+}
+.bubble.receipt {
+  position: relative;
+  max-width: 95%;
+  padding: 0;
+  margin-left: 30px;
+  align-self: flex-start;
+  color: var(--text);
+  border: 1px solid color-mix(in srgb, var(--success) 36%, var(--line));
+  background: color-mix(in srgb, var(--success) 8%, var(--solid-card));
+}
+.bubble.receipt::before {
+  position: absolute;
+  top: 1px;
+  left: -31px;
+  width: 24px;
+  height: 24px;
+  content: "";
+  background: url("/assets/figma-hmi/drivemate-logo-transparent-colorlocked.png")
+    center/contain no-repeat;
+}
+.receipt-card {
+  padding: 10px;
+}
+.receipt-card header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.receipt-card header i {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: white;
+  background: var(--success);
+  font-style: normal;
+  font-weight: 700;
+}
+.receipt-card header strong {
+  font-size: 12px;
+}
+.receipt-card > p {
+  margin: 7px 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+.receipt-changes,
+.receipt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+.receipt-changes > span {
+  min-width: 116px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 9px;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--line));
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--solid-card));
+}
+.receipt-changes small {
+  color: var(--muted);
+  font-size: 8px;
+}
+.receipt-changes strong {
+  color: var(--text);
+  font-size: 12px;
+}
+.receipt-changes b {
+  color: var(--accent);
+}
+.receipt-actions span {
+  padding: 4px 7px;
+  border: 1px solid color-mix(in srgb, var(--success) 34%, var(--line));
+  border-radius: 99px;
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 7%, transparent);
+  font-size: 9px;
+}
+.receipt-card footer {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 9px;
+}
+.loading:after {
+  content: "…";
+  animation: pulse 1s infinite;
+}
+.confirm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px;
+  border: 1px solid color-mix(in srgb, var(--warning) 40%, var(--line));
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--warning) 8%, var(--card));
+}
+.confirm-copy {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.confirm-copy > i {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: white;
+  background: var(--warning);
+  font-style: normal;
+  font-weight: 700;
+}
+.confirm-copy strong,
+.confirm-copy span,
+.confirm-copy small {
+  display: block;
+}
+.confirm-copy strong {
+  font-size: 11px;
+}
+.confirm-copy span {
+  margin-top: 2px;
+  font-size: 10px;
+}
+.confirm-copy small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 9px;
+}
+.confirm-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 5px;
+}
+.confirm button,
+.composer button,
+.audit button {
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 8px;
+  color: white;
+  background: var(--accent);
+}
+.confirm .secondary,
+.secondary {
+  color: var(--text);
+  border: 1px solid var(--line);
+  background: var(--card);
+}
+.error {
+  padding: 8px;
+  border-radius: 8px;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  font-size: 10px;
+}
+.composer {
+  padding-top: 0;
+  border: 0;
+  background: transparent;
+}
+.composer textarea {
+  width: 100%;
+  height: 54px;
+  resize: none;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  outline: none;
+  color: var(--text);
+  background: var(--card);
+}
+.composer > .model-row {
+  display: grid;
+  grid-template-columns: 1fr 62px;
+  gap: 6px;
+  margin-top: 5px;
+}
+.engine-switch {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+}
+.engine-switch button {
+  min-width: 0;
+  padding: 5px 4px;
+  border-radius: 6px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 9px;
+}
+.engine-switch button.active {
+  color: var(--accent-text);
+  background: var(--accent);
+}
+.composer button {
+  border: 0;
+}
+.composer button:disabled {
+  opacity: 0.5;
+}
+.toast {
+  position: fixed;
+  right: 20px;
+  top: 76px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  font-size: 11px;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+.voice-tools {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin-top: 5px;
+}
+.voice-tools button {
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 9px;
+}
+@media (max-width: 1199px) {
+  main {
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+  }
+  .topbar {
+    height: auto;
+    grid-template-columns: 1fr 1fr;
+  }
+  .workspace {
+    height: auto;
+    grid-template-columns: 1fr;
+  }
+  .panel {
+    min-height: 620px;
+  }
+  .chat {
+    min-height: 720px;
+  }
+}
+@media (max-width: 680px) {
+  main {
+    padding: 8px;
+  }
+  .topbar {
+    grid-template-columns: 1fr;
+  }
+  .switch {
+    order: 2;
+  }
+  .connection {
+    justify-content: flex-start;
+  }
+  .workspace {
+    gap: 8px;
+  }
+  .panel {
+    padding: 10px;
+  }
+  .tabs {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .control-grid,
+  .sensor-grid {
+    grid-template-columns: 1fr;
+  }
+  .route-info {
+    grid-template-columns: 1fr;
+  }
+  .brand span {
+    display: none;
+  }
+}
