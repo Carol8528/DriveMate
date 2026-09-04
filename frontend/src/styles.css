@@ -824,7 +824,7 @@ main[data-theme="dark"] {
   overflow: auto;
 }
 .bubble {
-  max-width: 90%;
+  max-width: calc(100% - 60px);
   padding: 8px 10px;
   border-radius: 11px;
   font-size: 11px;
@@ -834,6 +834,7 @@ main[data-theme="dark"] {
 .bubble.assistant {
   position: relative;
   margin-left: 30px;
+  margin-right: 30px;
   align-self: flex-start;
   color: var(--text);
   background: var(--solid-card);
@@ -851,6 +852,7 @@ main[data-theme="dark"] {
 }
 .bubble.user {
   position: relative;
+  margin-left: 30px;
   margin-right: 30px;
   align-self: flex-end;
   color: white;
@@ -868,9 +870,10 @@ main[data-theme="dark"] {
 }
 .bubble.receipt {
   position: relative;
-  max-width: 95%;
+  max-width: calc(100% - 60px);
   padding: 0;
   margin-left: 30px;
+  margin-right: 30px;
   align-self: flex-start;
   color: var(--text);
   border: 1px solid color-mix(in srgb, var(--success) 36%, var(--line));

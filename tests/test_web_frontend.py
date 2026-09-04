@@ -54,6 +54,25 @@ class WebFrontendContractTests(unittest.TestCase):
         self.assertIn('block:"end"', self.compact_app)
         self.assertIn('[messages,busy,run?.pending_tools?.length]', self.compact_app)
 
+    def test_chat_bubbles_stay_between_avatar_gutters(self):
+        self.assertGreaterEqual(
+            self.compact_css.count("max-width:calc(100%-60px)"), 2
+        )
+        self.assertIn(
+            ".bubble.assistant{position:relative;margin-left:30px;margin-right:30px",
+            self.compact_css,
+        )
+        self.assertIn(
+            ".bubble.user{position:relative;margin-left:30px;margin-right:30px",
+            self.compact_css,
+        )
+        self.assertIn(
+            ".bubble.receipt{position:relative;max-width:calc(100%-60px);padding:0;margin-left:30px;margin-right:30px",
+            self.compact_css,
+        )
+        self.assertNotIn(".bubble{max-width:90%", self.compact_css)
+        self.assertNotIn(".bubble.receipt{position:relative;max-width:95%", self.compact_css)
+
     def test_target_desktop_is_single_screen(self):
         self.assertIn("height:100dvh", self.compact_css)
         self.assertIn("grid-template-columns:30fr45fr25fr", self.compact_css)
