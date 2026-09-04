@@ -1,8 +1,8 @@
 # V8 架构说明
 
-V9 使用两个服务进程和一个前端进程，前端不承载业务编排：
+V8 使用两个服务进程和一个前端进程，避免把业务编排重新耦合进 Streamlit：
 
-1. React 前端通过 `frontend/server.mjs` 的同源代理调用 Agent API，Token 不进入浏览器脚本。
+1. Streamlit 前端只通过 `api_client.py` 调用 Agent API。
 2. `backend_server.py` 负责本地 Bearer 鉴权、请求大小限制、路由和 HTTP 错误语义。
 3. `backend_service.py` 负责运行生命周期及 V7 展示合同适配。
 4. V6 的 `components` 完成意图识别、硬约束过滤、依赖编排、安全授权、执行恢复和审计。

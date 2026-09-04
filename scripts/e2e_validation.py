@@ -452,7 +452,7 @@ def main() -> int:
 
 ## What is actually verified
 
-Every successful run starts through the same Agent REST contract used by the web frontend.
+Every successful run starts with the same frontend HTTP client used by Streamlit.
 It crosses the authenticated REST API and the real Agent decision pipeline. The
 rule-generated plan must produce verifiable climate, seat, and media receipts,
 persist a rule-triggered human handoff and CRM takeover, block navigation until

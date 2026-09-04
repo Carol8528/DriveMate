@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
-"""Start the simulator, Agent API, and DriveMate web frontend together."""
+"""Start the simulator, Agent API, and V8 Streamlit frontend together."""
 from __future__ import annotations
 
 import os
 import secrets
-import shutil
 import socket
 import subprocess
 import sys
 import time
-import webbrowser
 from typing import Dict
 from urllib.parse import urlparse
 
@@ -22,15 +20,6 @@ def _free_local_port(host: str = "127.0.0.1") -> int:
         return int(listener.getsockname()[1])
 
 
-def _available_port(host: str, preferred: int) -> int:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
-        try:
-            listener.bind((host, preferred))
-        except OSError:
-            return _free_local_port(host)
-    return preferred
-
-
 def _local_endpoint(
     configured_url: str,
     *,
@@ -39,21 +28,15 @@ def _local_endpoint(
 ) -> tuple[str, str, int]:
     if not configured_url:
         host = "127.0.0.1"
-        port = _available_port(host, default_port)
+        port = _free_local_port(host)
         return f"http://{host}:{port}", host, port
     parsed = urlparse(configured_url)
     host = parsed.hostname or "127.0.0.1"
-    requested_port = parsed.port or default_port
+    port = parsed.port or default_port
     if parsed.scheme != "http" or host not in {"127.0.0.1", "localhost"}:
         raise SystemExit(
             f"start_demo.py only manages a local HTTP {label}; "
             f"start external services separately."
-        )
-    port = _available_port(host, requested_port)
-    if port != requested_port:
-        print(
-            f"Configured {label} port {requested_port} is busy; using {port}.",
-            flush=True,
         )
     return f"http://{host}:{port}", host, port
 
@@ -142,21 +125,6 @@ def _stop(process: subprocess.Popen | None) -> None:
         process.wait(timeout=3)
 
 
-def _open_frontend(url: str) -> None:
-    try:
-        if webbrowser.open(url, new=2):
-            return
-    except webbrowser.Error:
-        pass
-    if hasattr(os, "startfile"):
-        try:
-            os.startfile(url)  # type: ignore[attr-defined]
-            return
-        except OSError:
-            pass
-    print(f"Open this URL in your browser: {url}", flush=True)
-
-
 def main() -> int:
     root = os.path.dirname(os.path.abspath(__file__))
     env = os.environ.copy()
@@ -173,11 +141,6 @@ def main() -> int:
         default_port=8000,
         label="Agent API",
     )
-    frontend_url, frontend_host, frontend_port = _local_endpoint(
-        str(os.environ.get("DRIVEMATE_FRONTEND_URL") or "").strip(),
-        default_port=8501,
-        label="web frontend",
-    )
     env.update(
         {
             "DRIVEMATE_SIMULATOR_TOKEN": simulator_token,
@@ -185,14 +148,11 @@ def main() -> int:
             "DRIVEMATE_API_TOKEN": api_token,
             "DRIVEMATE_API_MODE": "http",
             "DRIVEMATE_BACKEND_URL": backend_url,
-            "DRIVEMATE_FRONTEND_HOST": frontend_host,
-            "DRIVEMATE_FRONTEND_PORT": str(frontend_port),
         }
     )
 
     simulator = None
     backend = None
-    frontend = None
     try:
         simulator = subprocess.Popen(
             [
@@ -230,36 +190,19 @@ def main() -> int:
 
         print(f"Cockpit simulator ready at {simulator_url}", flush=True)
         print(f"DriveMate Agent API ready at {backend_url}", flush=True)
-        frontend_root = os.path.join(root, "frontend")
-        npm = shutil.which("npm.cmd") or shutil.which("npm")
-        node = shutil.which("node.exe") or shutil.which("node")
-        if not npm or not node:
-            raise RuntimeError("Node.js and npm are required for the web frontend.")
-        build = subprocess.run(
-            [npm, "run", "build"],
-            cwd=frontend_root,
-            env=env,
-            check=False,
-        )
-        if build.returncode != 0:
-            raise RuntimeError("DriveMate web frontend build failed.")
         frontend = subprocess.Popen(
-            [node, os.path.join(frontend_root, "server.mjs")],
-            cwd=frontend_root,
+            [
+                sys.executable,
+                "-m",
+                "streamlit",
+                "run",
+                os.path.join(root, "app.py"),
+            ],
+            cwd=root,
             env=env,
         )
-        _wait_for_health(
-            frontend_url,
-            "",
-            frontend,
-            timeout_s=10.0,
-            require_authenticated_flag=False,
-        )
-        print(f"DriveMate web frontend ready at {frontend_url}", flush=True)
-        _open_frontend(frontend_url)
         return frontend.wait()
     finally:
-        _stop(frontend)
         _stop(backend)
         _stop(simulator)
 

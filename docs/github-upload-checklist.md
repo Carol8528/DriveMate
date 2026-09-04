@@ -12,14 +12,14 @@
 - [x] 评委邮件移入本地 `private\`，不会被 Git 收录。
 - [x] README、测试和脚本中的移动路径已同步更新。
 - [x] 文本源码和文档已复扫，未发现残留的常见明文密钥格式。
-- [x] 35 项单元测试、7 项架构验证和 10 轮端到端场景均已通过。
+- [x] 40 项单元测试、7 项架构验证、10 轮端到端场景和设计规范检查均已通过。
 
 ## 目录分类
 
 | 分类 | 路径 | 是否上传 |
 |---|---|---|
 | 项目说明与安全策略 | `README.md`、`SECURITY.md` | 是 |
-| 前端与 API 适配 | `frontend/`、`api_client.py`、`perception_fusion.py` | 是 |
+| 前端与 API 适配 | `app.py`、`api_client.py`、`ui_chrome.py`、`perception_fusion.py` | 是 |
 | 后端与启动入口 | `backend_server.py`、`backend_service.py`、`simulator_server.py`、`start_demo.py` | 是 |
 | 核心组件与工具定义 | `components\`、`tools\` | 是 |
 | 静态资源与提示词 | `assets\`、`prompts\` | 是 |
@@ -45,6 +45,7 @@
 python -m unittest discover -s tests -t .
 python scripts\architecture_validation.py
 python scripts\e2e_validation.py
+python scripts\check_design_compliance.py
 ```
 
 ## 首次上传命令
