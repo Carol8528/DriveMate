@@ -58,6 +58,32 @@ def _local_endpoint(
     return f"http://{host}:{port}", host, port
 
 
+def _validated_bind_host(
+    configured_host: str | None,
+    *,
+    default_host: str,
+    label: str,
+) -> str:
+    host = (configured_host or default_host).strip().lower()
+    if host not in {"127.0.0.1", "localhost", "0.0.0.0", "::"}:
+        raise SystemExit(
+            f"{label} bind host must be localhost or a wildcard address."
+        )
+    return host
+
+
+def _env_flag(name: str, *, default: bool = False) -> bool:
+    raw_value = os.environ.get(name)
+    if raw_value is None or not raw_value.strip():
+        return default
+    value = raw_value.strip().lower()
+    if value in {"1", "true", "yes", "on"}:
+        return True
+    if value in {"0", "false", "no", "off"}:
+        return False
+    raise SystemExit(f"{name} must be a boolean value.")
+
+
 def _wait_for_health(
     base_url: str,
     token: str,
@@ -178,6 +204,13 @@ def main() -> int:
         default_port=8501,
         label="web frontend",
     )
+    frontend_bind_host = _validated_bind_host(
+        os.environ.get("DRIVEMATE_FRONTEND_HOST"),
+        default_host=frontend_host,
+        label="web frontend",
+    )
+    skip_frontend_build = _env_flag("DRIVEMATE_SKIP_FRONTEND_BUILD")
+    disable_browser = _env_flag("DRIVEMATE_NO_BROWSER")
     env.update(
         {
             "DRIVEMATE_SIMULATOR_TOKEN": simulator_token,
@@ -185,7 +218,7 @@ def main() -> int:
             "DRIVEMATE_API_TOKEN": api_token,
             "DRIVEMATE_API_MODE": "http",
             "DRIVEMATE_BACKEND_URL": backend_url,
-            "DRIVEMATE_FRONTEND_HOST": frontend_host,
+            "DRIVEMATE_FRONTEND_HOST": frontend_bind_host,
             "DRIVEMATE_FRONTEND_PORT": str(frontend_port),
         }
     )
@@ -202,8 +235,7 @@ def main() -> int:
                 simulator_host,
                 "--port",
                 str(simulator_port),
-                "--token",
-                simulator_token,
+                f"--token={simulator_token}",
             ],
             cwd=root,
             env=env,
@@ -220,8 +252,7 @@ def main() -> int:
                 backend_host,
                 "--port",
                 str(backend_port),
-                "--token",
-                api_token,
+                f"--token={api_token}",
             ],
             cwd=root,
             env=env,
@@ -231,18 +262,27 @@ def main() -> int:
         print(f"Cockpit simulator ready at {simulator_url}", flush=True)
         print(f"DriveMate Agent API ready at {backend_url}", flush=True)
         frontend_root = os.path.join(root, "frontend")
-        npm = shutil.which("npm.cmd") or shutil.which("npm")
         node = shutil.which("node.exe") or shutil.which("node")
-        if not npm or not node:
-            raise RuntimeError("Node.js and npm are required for the web frontend.")
-        build = subprocess.run(
-            [npm, "run", "build"],
-            cwd=frontend_root,
-            env=env,
-            check=False,
-        )
-        if build.returncode != 0:
-            raise RuntimeError("DriveMate web frontend build failed.")
+        if not node:
+            raise RuntimeError("Node.js is required for the web frontend.")
+        if skip_frontend_build:
+            dist_index = os.path.join(frontend_root, "dist", "index.html")
+            if not os.path.isfile(dist_index):
+                raise RuntimeError(
+                    "DRIVEMATE_SKIP_FRONTEND_BUILD requires frontend/dist/index.html."
+                )
+        else:
+            npm = shutil.which("npm.cmd") or shutil.which("npm")
+            if not npm:
+                raise RuntimeError("npm is required to build the web frontend.")
+            build = subprocess.run(
+                [npm, "run", "build"],
+                cwd=frontend_root,
+                env=env,
+                check=False,
+            )
+            if build.returncode != 0:
+                raise RuntimeError("DriveMate web frontend build failed.")
         frontend = subprocess.Popen(
             [node, os.path.join(frontend_root, "server.mjs")],
             cwd=frontend_root,
@@ -256,7 +296,8 @@ def main() -> int:
             require_authenticated_flag=False,
         )
         print(f"DriveMate web frontend ready at {frontend_url}", flush=True)
-        _open_frontend(frontend_url)
+        if not disable_browser:
+            _open_frontend(frontend_url)
         return frontend.wait()
     finally:
         _stop(frontend)

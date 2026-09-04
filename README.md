@@ -76,6 +76,17 @@ python start_demo.py
 
 若默认端口已占用，一键启动脚本会自动选择本机可用端口，此时请以 PowerShell 窗口输出的实际前端地址为准。本地数据写入 `data/*.db`，这些数据库已被 Git 忽略。
 
+### ModelScope Docker 部署
+
+仓库根目录包含生产用 `Dockerfile`。在 ModelScope 创空间中选择：
+
+- 应用部署框架：Docker
+- 云资源：免费 CPU
+- 端口：7860
+- OAuth：关闭
+
+基础演示不需要配置环境变量。若启用百炼引擎，将 `DRIVEMATE_APP_ID` 配为明文变量，并将 `DASHSCOPE_API_KEY` 配为密文变量。容器会预构建 React 前端，将公网服务绑定到 `0.0.0.0:7860`，Agent API 与座舱模拟器仍只在容器内部监听。
+
 ## 使用方式
 
 1. 在顶部切换“车主自驾”或“Robotaxi”。
