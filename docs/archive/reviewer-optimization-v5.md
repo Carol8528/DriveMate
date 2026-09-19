@@ -43,7 +43,7 @@
 ### 2.2 鉴权与密钥
 
 - 删除源码中的百炼 App ID/API Key 硬编码；
-- 仅从 `DRIVEMATE_APP_ID`、`DASHSCOPE_API_KEY` 等环境变量读取；
+- 仅从 `API_KEY` 等环境变量读取；
 - 座舱模拟器所有接口均要求 Bearer Token；
 - `start_demo.py` 每次启动自动生成一次性随机 Token，并同时注入 Streamlit 与模拟器，不把 Token 写入源码；
 - 错误 Token 的自动测试必须返回 HTTP 401。
@@ -116,8 +116,7 @@ scripts/e2e_validation.py    端到端验证与量化指标
 ### Windows 11 / PowerShell
 
 ```powershell
-$env:DRIVEMATE_APP_ID="<your_bailian_app_id>"
-$env:DASHSCOPE_API_KEY="<your_dashscope_api_key>"
+$env:API_KEY="<your_api_key>"
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt

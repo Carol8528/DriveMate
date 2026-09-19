@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import copy
-import json
 import re
 import threading
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-import requests
 
 from components.audit_store import (
     create_session,
@@ -22,11 +20,10 @@ from components.audit_store import (
     start_run,
 )
 from components.config import SETTINGS
-from components.confirmation_grant import make_grant
-from components.constraint_shield import plan_candidates, tool_allowed_for_intent
 from components.intent_graph import resolve_intent
 from components.knowledge_retriever import retrieve_knowledge
-from components.rule_engine import RISK_ORDER, run_rule
+from components.semantic_understanding import resolve_with_external_llm
+from components.rule_engine import run_rule
 from components.tool_executor import ToolExecutor
 from components.tool_registry import load_tool_registry
 from components.vehicle_gateway import VehicleGateway
@@ -36,7 +33,7 @@ from perception_fusion import fuse_perception, summarize_action_outcome
 JsonObject = Dict[str, Any]
 
 LOCAL_ENGINE = "融合编排引擎（本地可审计）"
-BAILIAN_ENGINE = "百炼应用（App API）"
+EXTERNAL_LLM_ENGINE = "外接模型（语义理解）"
 MODE_IDENTITIES = {
     "车主自驾": "OWNER_DRIVE",
     "Robotaxi 乘客": "ROBOTAXI_RIDE",
@@ -66,7 +63,7 @@ class ServiceError(RuntimeError):
 
 
 class AgentRunService:
-    """Coordinates V6 decision components without importing the legacy UI."""
+    """Coordinates semantic understanding and deterministic decision components."""
 
     def __init__(self) -> None:
         self.tool_meta, self.tool_schemas = load_tool_registry()
@@ -77,8 +74,8 @@ class AgentRunService:
 
     def available_engines(self) -> List[str]:
         engines = [LOCAL_ENGINE]
-        if SETTINGS.bailian_app_id and SETTINGS.dashscope_api_key:
-            engines.append(BAILIAN_ENGINE)
+        if SETTINGS.llm_api_key:
+            engines.append(EXTERNAL_LLM_ENGINE)
         return engines
 
     def health(self) -> JsonObject:
@@ -107,11 +104,17 @@ class AgentRunService:
             )
         return {
             "api_version": "v1",
-            "backend": "v6-decision-core",
+            "backend": "v10-semantic-safety-core",
             "tool_count": len(tools),
             "tools": tools,
             "modes": list(MODE_IDENTITIES),
             "engines": self.available_engines(),
+            "external_semantic": {
+                "enabled": bool(SETTINGS.llm_api_key),
+                "model": SETTINGS.llm_model,
+                "base_url": SETTINGS.llm_base_url,
+                "scope": "semantic_understanding_only",
+            },
         }
 
     def create_run(self, payload: Any) -> JsonObject:
@@ -123,9 +126,9 @@ class AgentRunService:
             run_id = start_run(session_id, message, snapshot)
             before_state = self._simulator_values()
             try:
-                if engine == BAILIAN_ENGINE:
-                    result = self._run_bailian(
-                        message, mode, snapshot, ToolExecutor(self.tool_meta, run_id), history
+                if engine == EXTERNAL_LLM_ENGINE:
+                    result = self._run_external_semantic(
+                        message, mode, snapshot, run_id=run_id, history=history
                     )
                 else:
                     result = self._run_local(
@@ -179,43 +182,45 @@ class AgentRunService:
             self._validate_snapshot(snapshot, mode)
             before_state = self._simulator_values()
             engine = str(current.get("engine") or LOCAL_ENGINE)
-            if engine == BAILIAN_ENGINE:
-                result = self._confirm_bailian(
-                    run_id, current, snapshot, ToolExecutor(self.tool_meta, run_id)
-                )
-            else:
-                grants = {
-                    str(item.get("step_id")): str(item.get("grant_id"))
-                    for item in pending
-                    if item.get("step_id") and item.get("grant_id")
-                }
-                for item in pending:
-                    log_confirmation(run_id, str(item.get("name") or ""), "confirmed")
-                result = self._run_local(
-                    str(context["user_text"]),
-                    mode,
-                    snapshot,
-                    run_id=run_id,
-                    confirmed=True,
-                    previous_calls=list(current.get("calls") or []),
-                    confirmed_grants=grants,
-                )
-                if any(
-                    item.get("confirmation_invalidated")
-                    for item in result.get("pending_tools", [])
-                    if isinstance(item, dict)
-                ):
-                    result["reply"] = (
-                        str(result.get("reply") or "")
-                        + "\n\n实时状态已变化，原确认已失效，请核对更新后的方案后再次确认。"
-                    ).strip()
-                    for item in result.get("pending_tools", []):
-                        if isinstance(item, dict):
-                            log_confirmation(
-                                run_id,
-                                str(item.get("name") or ""),
-                                "confirmation_invalidated",
-                            )
+            grants = {
+                str(item.get("step_id")): str(item.get("grant_id"))
+                for item in pending
+                if item.get("step_id") and item.get("grant_id")
+            }
+            for item in pending:
+                log_confirmation(run_id, str(item.get("name") or ""), "confirmed")
+            preserved_resolution = (
+                current.get("intent_resolution")
+                if engine == EXTERNAL_LLM_ENGINE
+                and isinstance(current.get("intent_resolution"), dict)
+                else None
+            )
+            result = self._run_local(
+                str(context["user_text"]),
+                mode,
+                snapshot,
+                run_id=run_id,
+                confirmed=True,
+                previous_calls=list(current.get("calls") or []),
+                confirmed_grants=grants,
+                intent_resolution=preserved_resolution,
+            )
+            if any(
+                item.get("confirmation_invalidated")
+                for item in result.get("pending_tools", [])
+                if isinstance(item, dict)
+            ):
+                result["reply"] = (
+                    str(result.get("reply") or "")
+                    + "\n\n实时状态已变化，原确认已失效，请核对更新后的方案后再次确认。"
+                ).strip()
+                for item in result.get("pending_tools", []):
+                    if isinstance(item, dict):
+                        log_confirmation(
+                            run_id,
+                            str(item.get("name") or ""),
+                            "confirmation_invalidated",
+                        )
 
             after_state = self._simulator_values()
             result = self._finalize_result(
@@ -302,7 +307,7 @@ class AgentRunService:
         if engine not in self.available_engines():
             raise ServiceError(
                 f"Engine is unavailable: {engine}. Configure the required credentials or use {LOCAL_ENGINE}.",
-                503 if engine == BAILIAN_ENGINE else 400,
+                503 if engine == EXTERNAL_LLM_ENGINE else 400,
             )
         snapshot = payload.get("snapshot")
         self._validate_snapshot(snapshot, mode)
@@ -363,9 +368,12 @@ class AgentRunService:
         previous_calls: Optional[List[JsonObject]] = None,
         confirmed_grants: Optional[Dict[str, str]] = None,
         history: Optional[List[JsonObject]] = None,
+        intent_resolution: Optional[JsonObject] = None,
     ) -> JsonObject:
         contextual_message = self._contextualize_message(message, history or [])
-        resolution = resolve_intent(contextual_message, snapshot=snapshot, mode=mode)
+        resolution = intent_resolution or resolve_intent(
+            contextual_message, snapshot=snapshot, mode=mode
+        )
         result = run_rule(
             contextual_message,
             mode,
@@ -379,286 +387,32 @@ class AgentRunService:
         )
         return self._attach_context_evidence(result, message, history or [])
 
-    def _run_bailian(
+    def _run_external_semantic(
         self,
         message: str,
         mode: str,
         snapshot: JsonObject,
-        executor: ToolExecutor,
+        *,
+        run_id: str,
         history: Optional[List[JsonObject]] = None,
     ) -> JsonObject:
-        resolution = resolve_intent(message, snapshot=snapshot, mode=mode)
-        if resolution.get("needs_clarification"):
-            return run_rule(
-                message,
-                mode,
-                snapshot,
-                executor=executor,
-                tool_meta=self.tool_meta,
-                intent_resolution=resolution,
-            )
-
-        url = (
-            SETTINGS.bailian_base_url.rstrip("/")
-            + "/"
-            + SETTINGS.bailian_app_id
-            + "/completion"
+        """Use the external LLM only for semantics, then execute the local deterministic chain."""
+        contextual_message = self._contextualize_message(message, history or [])
+        resolution = resolve_with_external_llm(
+            contextual_message,
+            snapshot=snapshot,
+            mode=mode,
+            history=history or [],
         )
-        headers = {
-            "Authorization": "Bearer " + SETTINGS.dashscope_api_key,
-            "Content-Type": "application/json",
-        }
-        prompt = (
-            "当前运行模式："
-            + mode
-            + "\n当前状态快照 StateSnapshot：\n"
-            + json.dumps(snapshot, ensure_ascii=False)
-            + "\nIntentGraph 预解析："
-            + json.dumps(resolution, ensure_ascii=False)
-            + "\n用户输入："
-            + message
-        )
-        if history:
-            prompt += "\n最近会话历史：\n" + json.dumps(history[-6:], ensure_ascii=False)
-        app_session_id: Optional[str] = None
-        calls: List[JsonObject] = []
-        pending: List[JsonObject] = []
-
-        for _ in range(6):
-            body: JsonObject = {
-                "input": {"prompt": prompt},
-                "parameters": {"has_thoughts": True},
-            }
-            if app_session_id:
-                body["input"]["session_id"] = app_session_id
-            response = requests.post(url, headers=headers, json=body, timeout=60)
-            if response.status_code != 200:
-                raise RuntimeError(
-                    f"Bailian App API returned HTTP {response.status_code}: "
-                    f"{response.text[:300]}"
-                )
-            try:
-                output = response.json().get("output", {})
-            except ValueError as exc:
-                raise RuntimeError("Bailian App API returned non-JSON content.") from exc
-            app_session_id = output.get("session_id") or app_session_id
-            feedback = []
-            for index, tool_call in enumerate(
-                self._extract_app_tool_calls(output.get("thoughts")), start=1
-            ):
-                name = tool_call["name"]
-                arguments = tool_call["arguments"]
-                if name not in self.tool_meta:
-                    calls.append(
-                        {
-                            "tool": name,
-                            "level": "L0",
-                            "result": "app_side",
-                            "summary": tool_call["response"]
-                            or "由百炼应用侧技能返回结果",
-                            "latency_ms": None,
-                            "arguments": arguments,
-                            "backend": "bailian_app",
-                            "receipt_id": None,
-                        }
-                    )
-                    continue
-                if not tool_allowed_for_intent(
-                    str(resolution.get("selected") or ""), name
-                ):
-                    result = {
-                        "success": False,
-                        "status": "constraint_blocked",
-                        "summary": (
-                            f"ConstraintShield 拒绝：工具 {name} 不属于当前意图 "
-                            f"{resolution.get('selected')} 的允许动作集合。"
-                        ),
-                        "backend": "constraint_shield",
-                    }
-                    call = {
-                        "tool": name,
-                        "level": self.tool_meta[name].get("level", "L0"),
-                        "result": "constraint_blocked",
-                        "summary": result["summary"],
-                        "latency_ms": None,
-                        "arguments": arguments,
-                        "backend": "constraint_shield",
-                        "receipt_id": None,
-                    }
-                else:
-                    result, call = executor.execute(
-                        name, arguments, snapshot, confirmed=False
-                    )
-                calls.append(call)
-                if result.get("status") == "pending_user_confirmation":
-                    step_id = f"bailian-{index}-{name}"
-                    grant = make_grant(name, arguments, snapshot)
-                    candidate = {
-                        "name": name,
-                        "arguments": arguments,
-                        "step_id": step_id,
-                        "depends_on": [],
-                        "safety_level": self.tool_meta[name].get("level", "L0"),
-                        **grant,
-                    }
-                    if not any(
-                        item.get("name") == name
-                        and item.get("arguments") == arguments
-                        for item in pending
-                    ):
-                        pending.append(candidate)
-                feedback.append(
-                    "工具 "
-                    + name
-                    + " 入参="
-                    + json.dumps(arguments, ensure_ascii=False)
-                    + " 返回="
-                    + json.dumps(result, ensure_ascii=False)
-                )
-
-            if feedback:
-                prompt = (
-                    "工具执行结果如下："
-                    + "；".join(feedback)
-                    + "。请基于真实结果继续；若无需再调用工具，请按契约只输出最终 JSON。"
-                )
-                continue
-            parsed = self._parse_agent_json(str(output.get("text") or ""))
-            normalized = self._normalize_bailian_result(
-                parsed,
-                str(output.get("text") or ""),
-                calls,
-                pending,
-                resolution,
-            )
-            return self._enforce_bailian_safety_plan(
-                normalized, message, mode, snapshot, executor, resolution
-            )
-
-        normalized = self._normalize_bailian_result(
-            None,
-            "已达到最大推理轮次，请简化请求或转人工。",
-            calls,
-            pending,
-            resolution,
-        )
-        return self._enforce_bailian_safety_plan(
-            normalized, message, mode, snapshot, executor, resolution
-        )
-
-    def _enforce_bailian_safety_plan(
-        self,
-        result: JsonObject,
-        message: str,
-        mode: str,
-        snapshot: JsonObject,
-        executor: ToolExecutor,
-        resolution: JsonObject,
-    ) -> JsonObject:
-        """Fail closed when a high-risk external response has no local tool trace."""
-        if result.get("pending_tools"):
-            return result
-        has_local_trace = any(
-            isinstance(call, dict) and call.get("tool") in self.tool_meta
-            for call in result.get("calls", [])
-        )
-        shield = plan_candidates(
-            str(resolution.get("selected") or ""), message, snapshot, mode
-        )
-        if has_local_trace or RISK_ORDER.get(str(shield.get("risk_level")), 0) < 2:
-            return result
-        return run_rule(
-            message,
+        result = run_rule(
+            contextual_message,
             mode,
             snapshot,
-            executor=executor,
+            executor=ToolExecutor(self.tool_meta, run_id=run_id),
             tool_meta=self.tool_meta,
             intent_resolution=resolution,
         )
-
-    def _confirm_bailian(
-        self,
-        run_id: str,
-        current: JsonObject,
-        snapshot: JsonObject,
-        executor: ToolExecutor,
-    ) -> JsonObject:
-        result = copy.deepcopy(current)
-        pending = [
-            item
-            for item in result.get("pending_tools", [])
-            if isinstance(item, dict)
-        ]
-        refreshed = []
-        stale = False
-        for item in pending:
-            grant = make_grant(
-                str(item.get("name") or ""),
-                item.get("arguments") if isinstance(item.get("arguments"), dict) else {},
-                snapshot,
-            )
-            updated = dict(item)
-            updated.update(grant)
-            if item.get("grant_id") != grant["grant_id"]:
-                updated["confirmation_invalidated"] = True
-                stale = True
-            refreshed.append(updated)
-        if stale:
-            result["pending_tools"] = refreshed
-            result["run_status"] = "waiting_confirmation"
-            result["reply"] = (
-                str(result.get("reply") or "")
-                + "\n\n实时状态已变化，原确认已失效，请核对更新后的方案后再次确认。"
-            ).strip()
-            for item in refreshed:
-                log_confirmation(
-                    run_id,
-                    str(item.get("name") or ""),
-                    "confirmation_invalidated",
-                )
-            return result
-
-        new_calls = list(result.get("calls") or [])
-        step_by_id = {
-            str(step.get("id")): step
-            for step in result.get("steps", [])
-            if isinstance(step, dict) and step.get("id")
-        }
-        for item in pending:
-            name = str(item.get("name") or "")
-            arguments = (
-                item.get("arguments")
-                if isinstance(item.get("arguments"), dict)
-                else {}
-            )
-            log_confirmation(run_id, name, "confirmed")
-            execution, call = executor.execute(
-                name, arguments, snapshot, confirmed=True
-            )
-            new_calls.append(call)
-            step = step_by_id.get(str(item.get("step_id")))
-            if step is None:
-                step = next(
-                    (
-                        candidate
-                        for candidate in result.get("steps", [])
-                        if isinstance(candidate, dict)
-                        and candidate.get("tool") == name
-                        and candidate.get("status") == "pending_confirm"
-                    ),
-                    None,
-                )
-            if step is not None:
-                step["status"] = "done" if execution.get("success") else "failed"
-                step["status_raw"] = step["status"]
-                step["note"] = str(execution.get("summary") or "")
-        result["calls"] = new_calls
-        result["pending_tools"] = []
-        result["reply"] = (
-            str(result.get("reply") or "")
-            + "\n\n已按本次授权执行待确认操作，并记录可审计回执。"
-        ).strip()
-        return result
+        return self._attach_context_evidence(result, message, history or [])
 
     @staticmethod
     def _contextualize_message(message: str, history: List[JsonObject]) -> str:
@@ -679,158 +433,6 @@ class AgentRunService:
             citations = "、".join(f"`{item['source']}`" for item in refs)
             result["reply"] = (str(result.get("reply") or "") + f"\n\n本轮已检索本地知识库：{citations}。").strip()
         return result
-
-    @staticmethod
-    def _extract_app_tool_calls(thoughts: Any) -> List[JsonObject]:
-        output = []
-        for thought in thoughts or []:
-            if not isinstance(thought, dict):
-                continue
-            if str(thought.get("action_type") or "").lower() == "response":
-                continue
-            name = str(
-                thought.get("action") or thought.get("action_name") or ""
-            ).strip()
-            if not name or name in {"思考过程", "思考", "reasoning"}:
-                continue
-            raw = (
-                thought.get("action_input")
-                or thought.get("action_input_stream")
-                or {}
-            )
-            if isinstance(raw, str):
-                try:
-                    arguments = json.loads(raw)
-                except json.JSONDecodeError:
-                    arguments = {}
-            else:
-                arguments = raw if isinstance(raw, dict) else {}
-            output.append(
-                {
-                    "name": name,
-                    "arguments": arguments,
-                    "response": str(
-                        thought.get("observation")
-                        or thought.get("response")
-                        or ""
-                    ).strip(),
-                }
-            )
-        return output
-
-    @staticmethod
-    def _parse_agent_json(content: str) -> Optional[JsonObject]:
-        text = content.strip()
-        if text.startswith("```"):
-            text = text.strip("`")
-            if text.lower().startswith("json"):
-                text = text[4:]
-        start, end = text.find("{"), text.rfind("}")
-        if start < 0 or end <= start:
-            return None
-        try:
-            value = json.loads(text[start : end + 1])
-        except json.JSONDecodeError:
-            return None
-        return value if isinstance(value, dict) else None
-
-    def _normalize_bailian_result(
-        self,
-        parsed: Optional[JsonObject],
-        raw_text: str,
-        calls: List[JsonObject],
-        pending: List[JsonObject],
-        resolution: JsonObject,
-    ) -> JsonObject:
-        data = parsed or {}
-        steps = []
-        for index, raw_step in enumerate(data.get("steps") or [], start=1):
-            if not isinstance(raw_step, dict):
-                continue
-            tool = str(raw_step.get("tool") or "")
-            status = str(raw_step.get("status") or "done")
-            if status not in VALID_STEP_STATUSES:
-                status = "done"
-            steps.append(
-                {
-                    "id": str(raw_step.get("id") or f"bailian-step-{index}"),
-                    "seq": raw_step.get("seq", index),
-                    "title": str(raw_step.get("title") or tool or "步骤"),
-                    "tool": tool,
-                    "status": status,
-                    "status_raw": status,
-                    "safety_level": str(
-                        raw_step.get("safety_level")
-                        or self.tool_meta.get(tool, {}).get("level", "L0")
-                    ),
-                    "note": str(raw_step.get("note") or ""),
-                }
-            )
-        successful = {
-            str(call.get("tool"))
-            for call in calls
-            if call.get("result") == "success"
-        }
-        pending_names = {str(item.get("name")) for item in pending}
-        for step in steps:
-            if step["tool"] in pending_names:
-                step["status"] = step["status_raw"] = "pending_confirm"
-            elif (
-                step["tool"] in self.tool_meta
-                and step["status"] == "done"
-                and step["tool"] not in successful
-            ):
-                step["status"] = step["status_raw"] = "failed"
-                step["note"] = "未观察到可验证执行回执，禁止标记为已执行"
-        known_step_tools = {str(step.get("tool")) for step in steps}
-        for item in pending:
-            if str(item.get("name")) in known_step_tools:
-                continue
-            steps.append(
-                {
-                    "id": item["step_id"],
-                    "seq": len(steps) + 1,
-                    "title": f"{item['name']}（待确认）",
-                    "tool": item["name"],
-                    "status": "pending_confirm",
-                    "status_raw": "pending_confirm",
-                    "safety_level": item.get("safety_level", "L2"),
-                    "note": "需用户确认后执行",
-                }
-            )
-
-        risk = str(data.get("risk_level") or "L0")
-        if risk not in RISK_ORDER:
-            risk = "L0"
-        for step in steps:
-            level = str(step.get("safety_level") or "L0")
-            if RISK_ORDER.get(level, 0) > RISK_ORDER[risk]:
-                risk = level
-        reply = str(
-            data.get("reply")
-            or raw_text
-            or "百炼应用未返回可用的结构化回复。"
-        )[:1200]
-        return {
-            "intent": str(
-                data.get("intent") or resolution.get("selected") or "unknown"
-            ),
-            "reply": reply,
-            "risk_level": risk,
-            "plan_summary": str(
-                data.get("plan_summary")
-                or "根据百炼应用建议与本地工具执行轨迹生成"
-            ),
-            "steps": steps,
-            "safety_tip": str(data.get("safety_tip") or "无"),
-            "calls": calls,
-            "pending_tools": pending,
-            "intent_resolution": resolution,
-            "decision_ledger": {
-                "source": "bailian_app_with_local_safety_gate",
-                "intent_resolution": resolution,
-            },
-        }
 
     def _finalize_result(
         self,

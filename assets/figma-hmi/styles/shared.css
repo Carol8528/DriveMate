@@ -1,0 +1,442 @@
+/* 1. Design tokens */
+:root {
+  --font-ui: "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+
+  --type-label: 10px;
+  --type-note: 11px;
+  --type-body: 12px;
+  --type-section: 14px;
+  --type-page: 18px;
+  --type-panel: 20px;
+  --type-value: 24px;
+  --type-halo: 32px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+
+  --radius-panel: 20px;
+  --radius-card: 14px;
+  --radius-unit: 10px;
+  --radius-pill: 999px;
+
+  --bg: #f2f8fc;
+  --text: #203047;
+  --muted: #66768b;
+  --accent: #4778f5;
+  --cyan: var(--accent);
+  --success: #1f8a68;
+  --mint: var(--success);
+  --warning: #a96812;
+  --amber: var(--warning);
+  --danger: #c83f54;
+  --red: var(--danger);
+  --orange: #c7653d;
+
+  --glass-blur: 12px;
+  --glass-panel: rgba(255, 255, 255, 0.22);
+  --glass-card: rgba(255, 255, 255, 0.15);
+  --glass-unit: rgba(255, 255, 255, 0.09);
+  --edge-panel: rgba(255, 255, 255, 0.48);
+  --edge-card: rgba(255, 255, 255, 0.36);
+  --edge-unit: rgba(255, 255, 255, 0.25);
+  --line: rgba(69, 101, 137, 0.16);
+  --line-strong: rgba(69, 101, 137, 0.26);
+  --shadow-panel:
+    0 18px 44px rgba(43, 76, 113, 0.13),
+    inset 0 1px 0 rgba(255, 255, 255, 0.42);
+  --shadow-card:
+    0 8px 22px rgba(43, 76, 113, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  --shadow-unit: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+
+  --theme-wash-a: rgba(253, 254, 255, 0.99);
+  --theme-wash-b: rgba(248, 252, 255, 0.84);
+  --theme-wash-c: rgba(238, 247, 253, 0.66);
+}
+
+/* 2. Global framework */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root,
+.stApp {
+  margin: 0;
+  font-family: var(--font-ui);
+}
+
+body,
+button,
+input,
+textarea,
+select {
+  font-family: var(--font-ui);
+}
+
+div[data-testid="stElementContainer"]:has(iframe[data-testid="stIFrame"][height="0"]) {
+  display: none;
+}
+
+body {
+  color: var(--text);
+  font-size: var(--type-body);
+}
+
+[data-testid="stAppViewContainer"] {
+  color: var(--text);
+  background:
+    radial-gradient(circle at 10% 6%, rgba(255, 255, 255, 0.72), transparent 31%),
+    radial-gradient(circle at 82% 88%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 33%),
+    linear-gradient(135deg, var(--theme-wash-a), var(--theme-wash-c));
+}
+
+[data-testid="stAppViewContainer"]::before {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  content: "";
+  pointer-events: none;
+  background:
+    linear-gradient(116deg, transparent 0 30%, rgba(255, 255, 255, 0.22) 46%, transparent 62%),
+    linear-gradient(90deg, var(--theme-wash-b), transparent 46%, var(--theme-wash-b));
+  opacity: 0.72;
+}
+
+[data-testid="stHeader"] {
+  height: 0;
+  background: transparent;
+}
+
+[data-testid="stToolbar"],
+[data-testid="stSidebar"],
+[data-testid="stStatusWidget"],
+[data-testid="stDecoration"] {
+  display: none;
+}
+
+div[data-testid="stToast"] { border: 1px solid var(--edge-card); color: var(--text); background: var(--glass-panel); box-shadow: var(--shadow-card); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur)); } div[data-testid="stToast"] :is(p, svg, [data-testid="stToastDynamicIcon"]) { color: var(--text); fill: currentColor; }
+
+[data-testid="stMain"] {
+  position: relative;
+  z-index: 1;
+}
+
+[data-testid="stMainBlockContainer"],
+.main .block-container {
+  width: 100%;
+  max-width: none;
+}
+
+p,
+li,
+label,
+dd,
+dt,
+[data-testid="stWidgetLabel"] p {
+  color: var(--text);
+  font-size: var(--type-body);
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  padding: 0;
+  color: var(--text);
+  font-family: var(--font-ui);
+}
+
+small,
+[data-testid="stCaptionContainer"] p {
+  color: var(--muted);
+  font-size: var(--type-note);
+}
+
+code {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, white);
+}
+
+.topbar-marker,
+.left-pane-marker,
+.center-pane-marker,
+.right-pane-marker,
+.quick-grid-anchor,
+.composer-marker,
+.dm-control-marker {
+  display: none;
+}
+
+div[data-testid="stMarkdownContainer"] > p:has(
+  > :is(
+    .topbar-marker,
+    .left-pane-marker,
+    .center-pane-marker,
+    .right-pane-marker,
+    .quick-grid-anchor,
+    .composer-marker,
+    .dm-control-marker
+  )
+) {
+  display: none;
+  height: 0;
+  margin: 0;
+}
+
+/* Native controls */
+.stButton > button,
+.stDownloadButton > button,
+[data-testid="stFormSubmitButton"] > button,
+[data-testid="stPopover"] > button,
+[data-testid="stPopover"] button[data-testid="stPopoverButton"] {
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-unit);
+  color: var(--text);
+  background: var(--glass-unit);
+  box-shadow: var(--shadow-unit);
+  font-size: var(--type-body);
+  font-weight: 650;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.stButton > button:hover,
+.stDownloadButton > button:hover,
+[data-testid="stFormSubmitButton"] > button:hover,
+[data-testid="stPopover"] > button:hover,
+[data-testid="stPopover"] button[data-testid="stPopoverButton"]:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--glass-unit));
+}
+
+.stButton > button:focus-visible,
+.stDownloadButton > button:focus-visible,
+[data-testid="stFormSubmitButton"] > button:focus-visible,
+[data-testid="stPopover"] > button:focus-visible,
+[data-testid="stPopover"] button[data-testid="stPopoverButton"]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 68%, transparent);
+  outline-offset: 2px;
+}
+
+.stButton > button[kind="primary"],
+[data-testid="stFormSubmitButton"] > button[kind="primary"] {
+  border-color: var(--accent);
+  color: #fff;
+  background: var(--accent);
+  box-shadow: 0 7px 16px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.stButton > button[kind="primary"]:hover,
+[data-testid="stFormSubmitButton"] > button[kind="primary"]:hover {
+  color: #fff;
+  background: color-mix(in srgb, var(--accent) 88%, #203047);
+}
+
+div[data-baseweb="select"] > div,
+div[data-testid="stTextInput"] div[data-baseweb="input"],
+div[data-testid="stNumberInput"] div[data-baseweb="input"],
+div[data-testid="stTextInput"] input,
+div[data-testid="stNumberInput"] input,
+textarea {
+  min-height: 38px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-unit);
+  color: var(--text);
+  background: var(--glass-unit);
+  box-shadow: var(--shadow-unit);
+  font-size: var(--type-body);
+}
+
+div[data-testid="stTextInput"] div[data-baseweb="base-input"],
+div[data-testid="stNumberInput"] div[data-baseweb="base-input"] {
+  background: transparent;
+}
+
+div[data-baseweb="select"] *,
+div[data-testid="stTextInput"] input::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+  font-size: var(--type-body);
+}
+
+div[data-testid="stTextInput"] input:focus,
+div[data-testid="stNumberInput"] input:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent);
+}
+
+div[data-testid="stAlert"],
+div[data-testid="stExpander"],
+div[data-testid="stDataFrame"],
+div[data-testid="stTable"] {
+  border: 1px solid var(--edge-card);
+  border-radius: var(--radius-card);
+  color: var(--text);
+  background: var(--glass-card);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
+[data-testid="stExpander"] summary,
+[data-testid="stExpander"] summary p {
+  min-height: 38px;
+  color: var(--muted);
+  font-size: var(--type-body);
+}
+
+/* 3. Main panels */
+.dm-panel-header {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 var(--space-1);
+}
+
+.dm-panel-header > div {
+  min-width: 0;
+}
+
+.dm-panel-header > div > span,
+.dm-eyebrow {
+  display: block;
+  color: var(--accent);
+  font-size: var(--type-label);
+  font-weight: 750;
+  line-height: 1.35;
+  letter-spacing: 0.13em;
+}
+
+.dm-panel-header h1 {
+  margin-top: 0;
+  overflow: hidden;
+  font-size: var(--type-panel);
+  font-weight: 750;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dm-page-header {
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.dm-page-header > div {
+  min-width: 0;
+}
+
+.dm-page-header h2 {
+  margin-top: 0;
+  font-size: var(--type-page);
+  font-weight: 750;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.dm-page-header p {
+  margin: var(--space-1) 0 0;
+  color: var(--muted);
+  font-size: var(--type-note);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.dm-status {
+  display: inline-flex;
+  min-height: 24px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--edge-unit));
+  border-radius: var(--radius-pill);
+  color: var(--accent);
+  background: var(--glass-unit);
+  font-size: var(--type-label);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.dm-status i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.dm-status-online,
+.dm-status-success {
+  color: var(--success);
+}
+
+.dm-status-warning {
+  color: var(--warning);
+}
+
+.dm-status-danger {
+  color: var(--danger);
+}
+
+/* 4. Functional cards */
+.dm-card {
+  border: 1px solid var(--edge-card);
+  border-radius: var(--radius-card);
+  background: var(--glass-card);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.08);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.08);
+}
+
+.dm-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.dm-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+/* 5. Information units */
+.dm-unit {
+  border: 1px solid var(--edge-unit);
+  border-radius: var(--radius-unit);
+  background: var(--glass-unit);
+  box-shadow: var(--shadow-unit);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
+.evidence-card > span,
+.safety-brief > span {
+  color: var(--accent);
+  font-size: var(--type-label);
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+
+/* 6. Page and component styles */

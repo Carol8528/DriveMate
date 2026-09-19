@@ -1,11 +1,8 @@
-# Security Notes
+# Security Policy
 
-- No production secret is stored in source code.
-- `DRIVEMATE_API_TOKEN`, `DRIVEMATE_SIMULATOR_TOKEN`, `DASHSCOPE_API_KEY`, and `CRM_API_KEY` are environment-only.
-- The Agent API and cockpit simulator reject unauthenticated requests with HTTP 401.
-- `start_demo.py` binds both services to loopback by default and generates separate one-time tokens.
-- L2 confirmation is enforced by `safety_guard.py`, not by the LLM prompt alone.
-- Confirmation grants bind the tool and resolved arguments to safety-relevant snapshot data; volatile sensor timestamps are excluded.
-- `contact_vehicle` requires verified passenger/vehicle coordinates and a measured distance <= 100m.
-- Frontend-generated sensor values are explicitly marked as simulated.
-- SQLite audit records are demo data and should follow normal retention/access-control policies in a production deployment.
+- `DRIVEMATE_API_TOKEN`, `DRIVEMATE_SIMULATOR_TOKEN`, `API_KEY`, and `CRM_API_KEY` are environment-only.
+- Never commit real credentials, access tokens, vehicle identifiers, or production user data.
+- The external LLM is restricted to semantic understanding. It receives no tool schemas and has no direct execution authority.
+- L2 confirmation is enforced by local safety/authorization components, not by an LLM prompt.
+- Vehicle and order side effects must pass the local ConstraintShield, schema validation, authorization, execution, and audit chain.
+- Rotate any credential immediately if it appears in source code, documentation, screenshots, logs, or Git history.

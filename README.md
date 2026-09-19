@@ -12,7 +12,7 @@ DriveMate 是面向新能源车主与 Robotaxi 乘客的可审计车载智能体
 - 执行闭环：展示感知、理解、裁决、规划、执行和回读阶段，以及每一步的执行结果。
 - 多轮会话：同一用户与模式可复用 Session，后端读取最近 8 轮历史上下文。
 - 完整审计：每个 Run 保存计划、确认、工具回执、状态变化及本地知识引用。
-- 可选百炼引擎：配置凭据后可启用百炼应用；其工具调用仍须经过本地安全、确认和审计边界。
+- 可选外接语义模型：配置 `API_KEY` 后可启用 OpenAI-compatible 模型；模型只参与意图/槽位理解，所有规划、确认、执行和审计仍由本地确定性链完成。
 - 单页 HMI：支持日间/夜间主题、语音输入、快捷场景、路线、座舱、融合感知、执行计划和主动安全视图。
 
 ## 系统架构
@@ -24,7 +24,7 @@ React Web 前端（frontend/）
 Agent REST API（backend_server.py）
         ▼
 业务编排服务（backend_service.py）
-        ├─ IntentGraph / 本地知识检索
+        ├─ 语义理解层：IntentGraph + 可选外接 LLM
         ├─ ConstraintShield / SchemaValidator
         ├─ DependencyPlanner / SafetyGuard
         ├─ ConfirmationGrant / RecoveryMesh
@@ -85,7 +85,7 @@ python start_demo.py
 - 端口：7860
 - OAuth：关闭
 
-基础演示不需要配置环境变量。若启用百炼引擎，将 `DRIVEMATE_APP_ID` 配为明文变量，并将 `DASHSCOPE_API_KEY` 配为密文变量。容器会预构建 React 前端，将公网服务绑定到 `0.0.0.0:7860`，Agent API 与座舱模拟器仍只在容器内部监听。
+基础演示不需要配置环境变量。若启用外接语义模型，只需将 `API_KEY` 配为密文变量；默认使用百炼 OpenAI-compatible 接口和 `qwen-plus`。如需切换其他兼容模型，可再配置 `LLM_BASE_URL` 与 `LLM_MODEL`。容器会预构建 React 前端，将公网服务绑定到 `0.0.0.0:7860`，Agent API 与座舱模拟器仍只在容器内部监听。
 
 ## 使用方式
 
@@ -110,11 +110,22 @@ python start_demo.py
 | `DRIVEMATE_FRONTEND_URL` | 一键启动使用的前端地址 | 可选，默认 `http://127.0.0.1:8501` |
 | `DRIVEMATE_AUDIT_DB` | 审计数据库路径 | 可选 |
 | `DRIVEMATE_SIMULATOR_DB` | 模拟器状态数据库路径 | 可选 |
-| `DRIVEMATE_APP_ID` | 百炼应用 ID | 启用百炼时必需 |
-| `DASHSCOPE_API_KEY` | DashScope API Key | 启用百炼时必需 |
+| `API_KEY` | 外接语义模型 API Key | 启用外接模型时必需 |
+| `LLM_BASE_URL` | OpenAI-compatible API 根地址 | 可选，默认百炼兼容模式 |
+| `LLM_MODEL` | 外接语义模型名称 | 可选，默认 `qwen-plus` |
+| `LLM_TIMEOUT_SECONDS` | 外接语义请求超时 | 可选，默认 30 秒 |
 | `CRM_API_ENDPOINT` / `CRM_API_KEY` | 外部 CRM 人工接管接口 | 可选 |
 
-仅当 `DRIVEMATE_APP_ID` 与 `DASHSCOPE_API_KEY` 同时存在时，前端才会显示“百炼应用（App API）”选项。
+仅当 `API_KEY` 存在时，前端才会启用“外接模型”。外接模型只做语义理解，不拥有工具 schema、执行权限或确认权限。
+
+Windows PowerShell 最小配置：
+
+```powershell
+$env:API_KEY="<your_api_key>"
+python start_demo.py
+```
+
+默认请求地址为 `https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`。如果使用其他 OpenAI-compatible 服务，再设置 `LLM_BASE_URL` 和 `LLM_MODEL`。
 
 ## 分开启动
 
@@ -190,7 +201,7 @@ npm --prefix frontend run build
 
 - 当前所有车辆与订单操作均在本地模拟器中执行。
 - 浏览器语音输入依赖浏览器自身的 Web Speech API 支持与权限。
-- 外部百炼和 CRM 能力只有在用户自行配置有效凭据后才会启用。
+- 外接语义模型和 CRM 能力只有在用户自行配置有效凭据后才会启用；外接语义模型不直接执行任何车辆或订单工具。
 - 当前指标是固定演示场景和自动化测试口径，不应解释为量产业务效果。
 - 实车接入、功能安全、网络安全、隐私合规和车型适配仍需独立验证与认证。
 

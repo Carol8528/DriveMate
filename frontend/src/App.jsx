@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 
+const LOCAL_ENGINE = "融合编排引擎（本地可审计）";
+const EXTERNAL_LLM_ENGINE = "外接模型（语义理解）";
+
 const ownerActions = [
   ["我有点困", "我连续驾驶有些困倦，请先评估安全并给我建议"],
   ["调节车内温度", "车内有点热，请帮我把温度调得舒适一些"],
@@ -96,7 +99,6 @@ function snapshot(mode, vehicle) {
       area_type: "高速",
       parking_policy: "允许临停",
     },
-    sensor_state: { simulated: true, source: "frontend_demo_bus", streams: [] },
   };
 }
 
@@ -533,47 +535,150 @@ function Perception({ run }) {
   );
 }
 function Orchestration({ run, audit, loadAudit }) {
+  const phaseLabels = {
+    perceive: "感知",
+    understand: "理解",
+    adjudicate: "裁决",
+    plan: "规划",
+    execute: "执行",
+    readback: "回读",
+    output: "输出",
+  };
+  const fallbackPhases = Object.keys(phaseLabels).map((name) => ({
+    name,
+    status: "pending",
+  }));
+  const phases = run?.phases?.length ? run.phases : fallbackPhases;
   const steps = run?.steps || [];
+  const plan = nonEmptyList(
+    run?.execution_plan,
+    steps.map((step) => step.title || step.tool).filter(Boolean),
+  );
+  const calls = run?.calls || [];
+  const completed = phases.filter((phase) => phase.status === "done").length;
+  const activePhase = phases.find((phase) =>
+    ["active", "waiting", "pending_confirm"].includes(phase.status),
+  );
+  const isWaiting = Boolean(run?.pending_tools?.length);
+  const currentPhase = activePhase
+    ? phaseLabels[activePhase.name] || activePhase.name
+    : completed === phases.length && run
+      ? "流程已完成"
+      : "等待任务";
+  const statusLabels = {
+    completed: "执行完成",
+    waiting_confirmation: "等待确认",
+    failed: "执行失败",
+    blocked: "已阻断",
+    cancelled: "已取消",
+  };
+  const runStatus = isWaiting
+    ? "等待确认"
+    : statusLabels[run?.run_status || run?.status] || "运行中";
+  const outcome = run?.action_outcome;
   return (
-    <div className="view">
-      <ViewHead title="服务编排" text="从意图理解到工具执行，全流程可追踪" />
-      <div className="phases">
-        {["感知", "理解", "裁决", "规划", "执行", "回读"].map((x, i) => (
-          <span
-            className={
-              run && i < (run.pending_tools?.length ? 4 : 6) ? "done" : ""
-            }
-            key={x}
-          >
-            {x}
-          </span>
-        ))}
-      </div>
+    <div className="view orchestration-view">
+      <ViewHead
+        title="服务编排"
+        text="阶段、方案、工具回执与状态回读均来自本轮 Run"
+      />
       {run ? (
         <>
-          <div className="result-card">
-            <span>当前任务 · {run.run_id}</span>
-            <strong>{run.plan_summary || run.intent || "任务已受理"}</strong>
-            <p>{run.reply}</p>
-          </div>
-          <ol className="steps">
-            {steps.map((s, i) => (
-              <li key={s.step_id || i}>
+          <section className="orchestration-progress">
+            <div>
+              <span>当前阶段</span>
+              <strong>{currentPhase}</strong>
+              <small>
+                {completed} / {phases.length} 个阶段已有完成证据
+              </small>
+            </div>
+            <div className="orchestration-run-meta">
+              <span className={isWaiting ? "waiting" : ""}>{runStatus}</span>
+              <small>{run.run_id || "当前任务"}</small>
+            </div>
+            <div className="orchestration-progress-track">
+              <i style={{ width: `${(completed / phases.length) * 100}%` }} />
+            </div>
+          </section>
+          <div className="phases orchestration-phases">
+            {phases.map((phase, i) => (
+              <span className={phase.status || "pending"} key={phase.name || i}>
                 <i>{String(i + 1).padStart(2, "0")}</i>
-                <div>
-                  <strong>{s.title || s.tool}</strong>
-                  <span>{s.status || "pending"}</span>
-                </div>
-              </li>
+                {phaseLabels[phase.name] || phase.name}
+              </span>
             ))}
-          </ol>
-          <button className="secondary" onClick={loadAudit}>
-            读取完整审计链
-          </button>
+          </div>
+          <div className="result-card orchestration-summary">
+            <span>本轮决策</span>
+            <strong>{run.plan_summary || run.intent || "任务已受理"}</strong>
+            <p>{run.reply || "已生成可审计的服务执行方案。"}</p>
+          </div>
+          <div className="orchestration-evidence">
+            <section>
+              <header>
+                <span>编排方案</span>
+                <small>{plan.length || steps.length} 步</small>
+              </header>
+              <ol>
+                {(plan.length ? plan : ["后端未返回执行计划"]).map((item, i) => (
+                  <li key={`${item}-${i}`}>
+                    <i>{String(i + 1).padStart(2, "0")}</i>
+                    <span>{item}</span>
+                    {steps[i]?.status && <em>{steps[i].status}</em>}
+                  </li>
+                ))}
+              </ol>
+            </section>
+            <section>
+              <header>
+                <span>工具回执</span>
+                <small>{calls.length} 条</small>
+              </header>
+              <ol>
+                {(calls.length ? calls : [{ tool: "暂无工具调用" }]).map(
+                  (call, i) => (
+                    <li key={call.call_id || `${call.tool}-${i}`}>
+                      <i>{String(i + 1).padStart(2, "0")}</i>
+                      <span>
+                        <strong>{call.tool || "工具调用"}</strong>
+                        <small>
+                          {call.receipt_id || call.summary || call.result || "已记录"}
+                        </small>
+                      </span>
+                      {call.status && <em>{call.status}</em>}
+                    </li>
+                  ),
+                )}
+              </ol>
+            </section>
+          </div>
+          <section className="orchestration-readback">
+            <div>
+              <span>状态回读</span>
+              <strong>
+                {outcome
+                  ? `${outcome.summary || outcome.status || "已有返回"} · ${outcome.detail || "车辆状态已形成闭环证据"}`
+                  : "等待执行回读 · 工具执行后的车辆状态将在此形成闭环证据"}
+              </strong>
+            </div>
+            <button className="secondary" onClick={loadAudit}>
+              {audit ? "刷新审计链" : "读取完整审计链"}
+            </button>
+          </section>
           {audit && <Audit audit={audit} />}
         </>
       ) : (
-        <Empty text="发送需求后，此处展示可审计的执行计划与回执。" />
+        <div className="orchestration-empty">
+          <div className="empty">发送需求后，此处展示可审计的执行计划与回执。</div>
+          <div className="phases orchestration-phases">
+            {fallbackPhases.map((phase, i) => (
+              <span className="pending" key={phase.name}>
+                <i>{String(i + 1).padStart(2, "0")}</i>
+                {phaseLabels[phase.name]}
+              </span>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -829,9 +934,11 @@ function Chat({
   cancel,
   engine,
   setEngine,
+  availableEngines = [LOCAL_ENGINE],
 }) {
   const [input, setInput] = useState("");
   const threadRef = useRef(null);
+  const externalAvailable = availableEngines.includes(EXTERNAL_LLM_ENGINE);
   const actions = mode === "owner" ? ownerActions : taxiActions;
   useEffect(() => {
     const thread = threadRef.current;
@@ -938,17 +1045,18 @@ function Chat({
           <div className="engine-switch" aria-label="Agent 引擎">
             <button
               className={
-                engine === "融合编排引擎（本地可审计）" ? "active" : ""
+                engine === LOCAL_ENGINE ? "active" : ""
               }
-              onClick={() => setEngine("融合编排引擎（本地可审计）")}
-              title="融合编排引擎（本地可审计）"
+              onClick={() => setEngine(LOCAL_ENGINE)}
+              title={LOCAL_ENGINE}
             >
               融合编排
             </button>
             <button
-              className={engine === "百炼应用（App API）" ? "active" : ""}
-              onClick={() => setEngine("百炼应用（App API）")}
-              title="外接模型"
+              className={engine === EXTERNAL_LLM_ENGINE ? "active" : ""}
+              onClick={() => externalAvailable && setEngine(EXTERNAL_LLM_ENGINE)}
+              title={externalAvailable ? "外接模型仅参与语义理解" : "配置 API_KEY 后启用"}
+              disabled={!externalAvailable}
             >
               外接模型
             </button>
@@ -974,7 +1082,7 @@ export default function App() {
     [error, setError] = useState(""),
     [health, setHealth] = useState(false),
     [meta, setMeta] = useState({}),
-    [engine, setEngine] = useState("融合编排引擎（本地可审计）"),
+    [engine, setEngine] = useState(LOCAL_ENGINE),
     [toast, setToast] = useState("");
   const session = useRef(null);
   const snap = useMemo(() => snapshot(mode, vehicle), [mode, vehicle]);
@@ -983,6 +1091,9 @@ export default function App() {
       .then(([h, m]) => {
         setHealth(Boolean(h.ok));
         setMeta(m);
+        if (!Array.isArray(m.engines) || !m.engines.includes(EXTERNAL_LLM_ENGINE)) {
+          setEngine((current) => current === EXTERNAL_LLM_ENGINE ? LOCAL_ENGINE : current);
+        }
       })
       .catch((e) => setError(e.message));
   }, []);
@@ -1008,6 +1119,7 @@ export default function App() {
   };
   const accept = (data, responseRole = "assistant") => {
     setRun(data);
+    setView("safety");
     session.current = data.session_id || session.current;
     setVehicle((v) => applyDiff(v, data.state_diff));
     setMessages((m) => [
@@ -1113,6 +1225,7 @@ export default function App() {
           cancel={() => action(() => api.cancel(run.run_id), "receipt")}
           engine={engine}
           setEngine={setEngine}
+          availableEngines={Array.isArray(meta.engines) ? meta.engines : [LOCAL_ENGINE]}
         />
       </div>
       {toast && <div className="toast">{toast}</div>}

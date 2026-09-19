@@ -5,8 +5,9 @@ V9 使用两个服务进程和一个前端进程，前端不承载业务编排�
 1. React 前端通过 `frontend/server.mjs` 的同源代理调用 Agent API，Token 不进入浏览器脚本。
 2. `backend_server.py` 负责本地 Bearer 鉴权、请求大小限制、路由和 HTTP 错误语义。
 3. `backend_service.py` 负责运行生命周期及 V7 展示合同适配。
-4. V6 的 `components` 完成意图识别、硬约束过滤、依赖编排、安全授权、执行恢复和审计。
-5. 车辆控制只能通过带独立令牌的 `simulator_server.py` 执行。
+4. `components/semantic_understanding.py` 可调用外接 OpenAI-compatible LLM，仅生成意图、置信度与语义槽位；本地 IntentGraph 负责安全覆盖与融合。
+5. `components` 的 ConstraintShield、DependencyPlanner、ConfirmationGrant、SchemaValidator、ToolExecutor 完成确定性的权限裁决和执行。
+6. 车辆控制只能通过带独立令牌的 `simulator_server.py` 执行。
 
 ## 运行生命周期
 
@@ -20,3 +21,8 @@ V9 使用两个服务进程和一个前端进程，前端不承载业务编排�
 - REST 元数据不返回工具定义的本地 `source_path`。
 - 审计下载会把 SQLite 中的 JSON 字符串解码成对象，但仍只允许持有本地 API 令牌的客户端读取。
 - 前端演示传感器始终标记 `simulated=true`，不会伪装成真实车辆传感器。
+
+
+## 外接模型边界
+
+外接 LLM 不接收工具 schema，不参与 ToolExecutor，也不能创建授权。它的输出被视为不可信的概率性语义证据；若外接服务不可用，系统回退到本地 IntentGraph。高风险本地安全覆盖始终优先，最终动作仍必须经过硬约束、参数校验、确认授权、状态复核和审计。

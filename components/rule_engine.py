@@ -32,7 +32,15 @@ def _step(sid: str, seq: int, title: str, tool: str, tool_meta: dict, arguments=
             "status": "planned", "safety_level": tool_meta.get(tool, {}).get("level", "L0"), "note": ""}
 
 
-def _extract_destination(text: str, snapshot: dict) -> Optional[str]:
+def _extract_destination(text: str, snapshot: dict, semantic_slots: Optional[dict] = None) -> Optional[str]:
+    slots = semantic_slots if isinstance(semantic_slots, dict) else {}
+    for key in ("destination", "new_destination", "waypoint", "target_location"):
+        value = slots.get(key)
+        if isinstance(value, str):
+            value = value.strip(" ，。吧")[:80]
+            if value:
+                return value
+
     patterns = [
         r"(?:改|换)(?:一下|个)?目的地(?:到|去|为)?\s*([^，。；]{2,30})",
         r"(?:新增|加)(?:一个|个)?途经(?:点)?(?:到|去|为)?\s*([^，。；]{2,30})",
@@ -47,7 +55,7 @@ def _extract_destination(text: str, snapshot: dict) -> Optional[str]:
     return None
 
 
-def _plan_for(intent: str, text: str, mode: str, snap: dict, tool_meta: dict) -> Dict[str, Any]:
+def _plan_for(intent: str, text: str, mode: str, snap: dict, tool_meta: dict, semantic_slots: Optional[dict] = None) -> Dict[str, Any]:
     v, o, env = snap.get("vehicle_state", {}), snap.get("order_state", {}), snap.get("environment_state", {})
 
     if intent == "fatigue":
@@ -130,7 +138,7 @@ def _plan_for(intent: str, text: str, mode: str, snap: dict, tool_meta: dict) ->
                 "safety_tip": "请在人行区域寻找车辆，不要进入活动机动车道。", "steps": steps}
 
     if intent == "route_plan":
-        destination = _extract_destination(text, snap) or str(o.get("destination") or "").strip()
+        destination = _extract_destination(text, snap, semantic_slots) or str(o.get("destination") or "").strip()
         if not destination:
             return {"clarify": True, "reply": "已识别路线导航请求，但当前没有明确目的地。请补充要去哪里。"}
         steps = [
@@ -184,7 +192,7 @@ def _plan_for(intent: str, text: str, mode: str, snap: dict, tool_meta: dict) ->
                 "safety_tip": "路口、消防通道、非机动车道和明确禁停区域均属于硬约束，便利性排序不能覆盖。", "steps": steps}
 
     if intent == "reroute":
-        destination = _extract_destination(text, snap)
+        destination = _extract_destination(text, snap, semantic_slots)
         if not destination:
             return {"clarify": True, "reply": "已识别到目的地/途经点变更，但缺少明确的新目的地。请补充要改到哪里。"}
         steps = [
@@ -222,9 +230,18 @@ def _plan_for(intent: str, text: str, mode: str, snap: dict, tool_meta: dict) ->
                 "safety_tip": "如出现失去意识、严重胸痛或呼吸困难等危急情况，应立即联系当地急救服务。", "steps": steps}
 
     if intent == "climate":
+        slots = semantic_slots if isinstance(semantic_slots, dict) else {}
+        try:
+            temperature = float(slots.get("temperature_c"))
+        except (TypeError, ValueError):
+            temperature = 22
+        if not 16 <= temperature <= 30:
+            temperature = 22
+        if float(temperature).is_integer():
+            temperature = int(temperature)
         steps = [_step("climate-set", 1, "调节空调至舒适温度", "set_climate", tool_meta,
-                       {"zone": "all", "temperature": 22, "fan_speed": 2, "mode": "auto"})]
-        return {"plan_summary": "座舱温度调节", "reply": "将空调调至 22℃ 自动模式。", "safety_tip": "无", "steps": steps}
+                       {"zone": "all", "temperature": temperature, "fan_speed": 2, "mode": "auto"})]
+        return {"plan_summary": "座舱温度调节", "reply": f"将空调调至 {temperature}℃ 自动模式。", "safety_tip": "无", "steps": steps}
 
     if intent == "commute":
         steps = [
@@ -274,7 +291,7 @@ def run_rule(text: str, mode: str, snap: dict, executor, tool_meta: dict, confir
         result["decision_ledger"] = build_ledger(resolution, shield, {"replans": [], "topology": {"nodes": 0, "cycles": 0, "order": []}}, trace.events)
         return result
 
-    plan = _plan_for(intent, text, mode, snap, tool_meta)
+    plan = _plan_for(intent, text, mode, snap, tool_meta, semantic_slots=resolution.get("semantic_slots"))
     if plan.get("clarify"):
         result = {"intent": intent, "risk_level": shield.get("risk_level", "L0"), "plan_summary": "语义参数不足：执行前澄清",
                   "reply": plan["reply"], "steps": [], "calls": [], "pending_tools": [], "safety_tip": "无",

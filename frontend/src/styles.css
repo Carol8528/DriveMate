@@ -598,6 +598,213 @@ main[data-theme="dark"] {
   border-color: color-mix(in srgb, var(--success) 35%, var(--line));
   background: color-mix(in srgb, var(--success) 9%, transparent);
 }
+.orchestration-view {
+  gap: 7px;
+  overflow: hidden;
+}
+.orchestration-view > * {
+  flex-shrink: 0;
+}
+.orchestration-progress {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 10px;
+  padding: 8px 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--card);
+}
+.orchestration-progress span,
+.orchestration-progress small,
+.orchestration-evidence header,
+.orchestration-readback span {
+  color: var(--muted);
+  font-size: 9px;
+}
+.orchestration-progress strong {
+  display: block;
+  margin: 1px 0;
+  font-size: 13px;
+}
+.orchestration-run-meta {
+  text-align: right;
+}
+.orchestration-run-meta span {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+}
+.orchestration-run-meta span.waiting {
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+}
+.orchestration-run-meta small {
+  display: block;
+  margin-top: 2px;
+}
+.orchestration-progress-track {
+  position: absolute;
+  right: 10px;
+  bottom: 6px;
+  left: 10px;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--line);
+}
+.orchestration-progress-track i {
+  display: block;
+  height: 100%;
+  background: var(--success);
+}
+.orchestration-phases {
+  grid-template-columns: repeat(7, 1fr);
+}
+.orchestration-phases span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 5px 1px;
+}
+.orchestration-phases span i {
+  color: var(--muted);
+  font-size: 8px;
+  font-style: normal;
+}
+.orchestration-phases span.active,
+.orchestration-phases span.waiting,
+.orchestration-phases span.pending_confirm {
+  color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 38%, var(--line));
+  background: color-mix(in srgb, var(--warning) 8%, transparent);
+}
+.orchestration-summary {
+  padding: 7px 10px;
+}
+.orchestration-summary strong {
+  margin: 2px 0;
+  font-size: 12px;
+}
+.orchestration-summary p {
+  margin: 0;
+  line-height: 1.35;
+}
+.orchestration-evidence {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  min-height: 88px;
+  flex: 1 1 120px;
+  overflow: hidden;
+}
+.orchestration-evidence > section {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  overflow: hidden;
+}
+.orchestration-evidence header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.orchestration-evidence header span {
+  color: var(--text);
+  font-weight: 700;
+}
+.orchestration-evidence ol {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.orchestration-evidence li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+  min-height: 22px;
+  padding: 3px 5px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--line) 35%, transparent);
+  font-size: 9px;
+}
+.orchestration-evidence li > i {
+  color: var(--accent);
+  font-style: normal;
+}
+.orchestration-evidence li > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.orchestration-evidence li > span strong,
+.orchestration-evidence li > span small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.orchestration-evidence li > span small {
+  color: var(--muted);
+  font-size: 9px;
+}
+.orchestration-evidence li em {
+  color: var(--muted);
+  font-size: 9px;
+  font-style: normal;
+}
+.orchestration-readback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  min-height: 38px;
+}
+.orchestration-readback > div {
+  min-width: 0;
+}
+.orchestration-readback strong {
+  display: block;
+  margin: 1px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.orchestration-readback strong {
+  font-size: 10px;
+}
+.orchestration-readback button {
+  flex: 0 0 auto;
+  padding: 6px 8px;
+  font-size: 9px;
+}
+.orchestration-empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
 .steps,
 .memory-list {
   display: flex;
