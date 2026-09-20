@@ -49,6 +49,7 @@ VALID_STEP_STATUSES = {
     "done",
     "degraded",
     "pending_confirm",
+    "waiting_dependency",
     "failed",
     "blocked",
     "blocked_dependency",

@@ -34,6 +34,21 @@ class WebFrontendContractTests(unittest.TestCase):
         self.assertIn(">外接模型</button>", self.compact_app)
         self.assertNotIn(">百炼应用</button>", self.compact_app)
 
+    def test_route_confirmation_uses_current_plan_context(self):
+        self.assertIn('if(item.title)returnitem.title;', self.compact_app)
+        self.assertIn('args.preference==="comfort"?"平稳优先":""', self.compact_app)
+        self.assertNotIn('plan_route:"开始导航至建议的安全休息点"', self.compact_app)
+
+    def test_route_receipt_uses_executed_route_arguments(self):
+        self.assertIn('if(tool!=="plan_route")returnactionLabels[tool]||call.title;', self.compact_app)
+        self.assertIn('`已生成前往${destination||"当前目的地"}的${preference}路线${deadline}`', self.compact_app)
+        self.assertNotIn('plan_route:"已生成前往安全休息点的路线"', self.compact_app)
+
+    def test_memory_view_reuses_icon_navigation(self):
+        self.assertIn('memory:<Memorymessages={messages}/>', self.compact_app)
+        self.assertIn('<i>{viewIcons[key]}</i><span>{label}</span>', self.compact_app)
+        self.assertEqual(self.app.count('className="tabs"'), 1)
+
     def test_empty_backend_lists_render_waiting_content(self):
         self.assertIn(
             "functionnonEmptyList(value,fallback){returnArray.isArray(value)&&value.length>0?value:fallback;}",

@@ -1,0 +1,48 @@
+{
+  "name": "request_curbside_stop",
+  "domain": "robotaxi_order",
+  "description": "请求车辆减速靠边并在指定安全停车点停稳（改变车辆运动状态，需用户确认）",
+  "safety_level": "L2",
+  "idempotent": false,
+  "requires_confirmation": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "stop_point": {
+        "type": "object",
+        "description": "目标停车点",
+        "properties": {
+          "lat": {
+            "type": "number",
+            "description": "纬度"
+          },
+          "lng": {
+            "type": "number",
+            "description": "经度"
+          },
+          "address": {
+            "type": "string",
+            "description": "地址描述"
+          }
+        },
+        "required": [
+          "lat",
+          "lng",
+          "address"
+        ]
+      },
+      "reason": {
+        "type": "string",
+        "enum": [
+          "passenger_request",
+          "safety_concern"
+        ],
+        "description": "停车原因"
+      }
+    },
+    "required": [
+      "stop_point",
+      "reason"
+    ]
+  }
+}

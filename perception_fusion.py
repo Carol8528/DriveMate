@@ -72,6 +72,38 @@ def _distance_m(order_state: JsonObject) -> Optional[float]:
     return radius_m * 2 * math.atan2(math.sqrt(value), math.sqrt(1 - value))
 
 
+def resolve_pedestrian_distance_m(snapshot: JsonObject) -> Optional[float]:
+    """人车距离统一解析入口（服务编排与融合感知共用）。
+
+    取数优先级与 build_sensor_state 中 gnss_order 流的 distance_m 完全一致：
+    1. perception_controls.distance_m —— 融合感知面板人工标定/修改的值；
+    2. sensor_state 中 gnss_order 流的 readings.distance_m；
+    3. order_state 乘客/车辆坐标 Haversine 推算。
+    三者皆不可用时返回 None。
+    """
+    snapshot = snapshot if isinstance(snapshot, dict) else {}
+    controls = snapshot.get("perception_controls")
+    if isinstance(controls, dict) and controls.get("distance_m") is not None:
+        try:
+            return round(float(controls["distance_m"]), 1)
+        except (TypeError, ValueError):
+            pass
+    sensor_state = snapshot.get("sensor_state")
+    if isinstance(sensor_state, dict):
+        streams = sensor_state.get("streams")
+        streams = streams if isinstance(streams, list) else []
+        for stream in streams:
+            if not isinstance(stream, dict) or stream.get("id") != "gnss_order":
+                continue
+            readings = stream.get("readings")
+            if isinstance(readings, dict) and readings.get("distance_m") is not None:
+                try:
+                    return round(float(readings["distance_m"]), 1)
+                except (TypeError, ValueError):
+                    pass
+    return _distance_m(snapshot.get("order_state") or {})
+
+
 def build_sensor_state(
     mode: str,
     vehicle_state: JsonObject,
@@ -97,6 +129,8 @@ def build_sensor_state(
         curb_risk = 84 if any(
             term in parking_policy for term in ("禁停", "禁止", "不允许")
         ) else _clamp(controls.get("curb_risk", 24))
+        if curb_risk > 60:
+            parking_policy = "不允许临停"
         streams = [
             {
                 "id": "surround_camera",
@@ -134,7 +168,7 @@ def build_sensor_state(
                 "latency_ms": 18,
                 "readings": {
                     "location_confidence": location_confidence / 100,
-                    "distance_m": _distance_m(order_state),
+                    "distance_m": controls.get("distance_m", _distance_m(order_state)),
                     "order_status": order_state.get("status"),
                 },
             },
@@ -330,6 +364,8 @@ def fuse_perception(
             if identity.get("mode") == "ROBOTAXI_RIDE"
             else "车主自驾"
         )
+        controls = snapshot.get("perception_controls")
+        controls = controls if isinstance(controls, dict) else {}
         sensor_state = build_sensor_state(
             mode,
             snapshot.get("vehicle_state")
@@ -341,6 +377,7 @@ def fuse_perception(
             snapshot.get("order_state")
             if isinstance(snapshot.get("order_state"), dict)
             else {},
+            controls,
             source="snapshot_adapter",
         )
 

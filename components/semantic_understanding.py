@@ -37,6 +37,9 @@ _SCENARIO_GUIDE = {
     "vehicle_status": "查询车辆、电量、续航、车况",
     "human_support": "联系、转接人工客服",
     "trip_status": "查询 Robotaxi 订单、车辆位置、预计到达时间",
+    "family_long_trip": "带孩子等家人长途出行，一句话含到达时间、电量、充电、用餐、儿童舒适等多个目标",
+    "airport_transfer": "自驾赶飞机/去机场，带到达时间、平稳路线、车内会议等并存约束",
+    "robotaxi_dropoff": "Robotaxi 乘客要求提前下车、就地停车或不到目的地直接下车",
 }
 
 

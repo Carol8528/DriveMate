@@ -1,0 +1,29 @@
+{
+  "name": "estimate_range_sufficiency",
+  "domain": "navigation_charging",
+  "description": "续航充裕性评估（对比目的地里程与可用续航，判断是否需要途中补能）",
+  "safety_level": "L0",
+  "idempotent": true,
+  "requires_confirmation": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "destination": {
+        "type": "string",
+        "description": "目的地名称或地址"
+      },
+      "distance_km": {
+        "type": "number",
+        "description": "预计里程（km，可选；缺省时按演示里程估算）"
+      },
+      "reserve_percent": {
+        "type": "integer",
+        "description": "到达后需保留的最低电量百分比（可选，默认 15）",
+        "default": 15
+      }
+    },
+    "required": [
+      "destination"
+    ]
+  }
+}

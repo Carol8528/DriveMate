@@ -15,6 +15,8 @@ TOOL_ENDPOINTS = {
     "set_ambient": "/v1/cabin/ambient",
     "plan_route": "/v1/navigation/route",
     "contact_vehicle": "/v1/vehicle/contact",
+    "request_curbside_stop": "/v1/vehicle/curbside_stop",
+    "unlock_door": "/v1/vehicle/door",
 }
 
 

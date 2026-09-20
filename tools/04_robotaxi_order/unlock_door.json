@@ -1,0 +1,37 @@
+{
+  "name": "unlock_door",
+  "domain": "robotaxi_order",
+  "description": "解锁车门（L3 高风险：仅在车速为 0、档位 P、路边环境安全且车辆状态有效时允许，需用户确认）",
+  "safety_level": "L3",
+  "idempotent": false,
+  "requires_confirmation": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "door": {
+        "type": "string",
+        "enum": [
+          "right_front",
+          "right_rear",
+          "left_front",
+          "left_rear",
+          "all"
+        ],
+        "description": "目标车门"
+      },
+      "reason": {
+        "type": "string",
+        "enum": [
+          "passenger_dropoff",
+          "emergency"
+        ],
+        "description": "解锁原因"
+      }
+    },
+    "required": [
+      "door",
+      "reason"
+    ]
+  },
+  "constraints": "speed_kmh == 0 AND gear == \"P\" AND curb_side_safe == true AND vehicle_state_valid == true"
+}

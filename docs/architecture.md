@@ -6,8 +6,9 @@ V9 使用两个服务进程和一个前端进程，前端不承载业务编排�
 2. `backend_server.py` 负责本地 Bearer 鉴权、请求大小限制、路由和 HTTP 错误语义。
 3. `backend_service.py` 负责运行生命周期及 V7 展示合同适配。
 4. `components/semantic_understanding.py` 可调用外接 OpenAI-compatible LLM，仅生成意图、置信度与语义槽位；本地 IntentGraph 负责安全覆盖与融合。
-5. `components` 的 ConstraintShield、DependencyPlanner、ConfirmationGrant、SchemaValidator、ToolExecutor 完成确定性的权限裁决和执行。
-6. 车辆控制只能通过带独立令牌的 `simulator_server.py` 执行。
+5. `components/scenario_decomposer.py` 负责复杂场景拆解：当一句话同时包含多个目标、约束或授权动作（家庭长途出行、赶飞机行程、Robotaxi 临时下车）时，把它编译成带依赖关系的子目标 DAG；拆解结果不直接执行，仍交给下一条确定性链。
+6. `components` 的 ConstraintShield、DependencyPlanner、ConfirmationGrant、SchemaValidator、ToolExecutor 完成确定性的权限裁决和执行。多阶段授权链（停车 → 状态重检 → 解锁）中，已确认执行的步骤在同一 Run 内复用回执，不会重放或重复挂起。
+7. 车辆控制只能通过带独立令牌的 `simulator_server.py` 执行。
 
 ## 运行生命周期
 

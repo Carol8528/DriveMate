@@ -137,6 +137,21 @@ class Handler(BaseHTTPRequestHandler):
             state = {"action": args.get("action", "both"), "duration_seconds": args.get("duration_seconds", 3), "distance_m": distance, "executed": True}
             set_state("vehicle_contact", state)
             result = {"success": True, "status": "executed", "summary": "车辆闪灯/鸣笛动作已执行", "verified_state": state}
+        elif path == "/v1/vehicle/curbside_stop":
+            stop_point = args.get("stop_point") or {}
+            address = stop_point.get("address") or "安全停车点"
+            state = {"speed_kmh": 0, "gear": "P", "stopped": True, "stop_point": stop_point, "address": address}
+            set_state("vehicle_motion", state)
+            result = {"success": True, "status": "executed", "summary": "车辆已减速靠边并停稳：" + address, "verified_state": state}
+        elif path == "/v1/vehicle/door":
+            ctx = payload.get("context") or {}
+            if not ctx.get("curb_side_safe"):
+                self._json(409, {"success": False, "status": "safety_blocked", "summary": "模拟器拒绝：开门前确定性条件未满足（车速/档位/路缘安全）"})
+                return
+            door = args.get("door", "right_rear")
+            state = {"door": door, "locked": False, "reason": args.get("reason", "passenger_dropoff"), "unlocked_at": now()}
+            set_state("door", state)
+            result = {"success": True, "status": "executed", "summary": "车门已解锁：" + str(door), "verified_state": state}
         else:
             self._json(404, {"success": False, "summary": "not found"})
             return

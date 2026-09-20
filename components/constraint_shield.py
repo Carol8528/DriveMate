@@ -13,7 +13,7 @@ from components.safety_guard import haversine_m
 def _mode_for(intent: str) -> str:
     return "robotaxi" if intent in {
         "medical", "find_car", "modify_pickup", "reroute", "cancel_order",
-        "human_support", "trip_status",
+        "human_support", "trip_status", "robotaxi_dropoff",
     } else "driver"
 
 
@@ -33,6 +33,18 @@ def _risk_level(intent: str, text: str, snapshot: Dict[str, Any]) -> str:
         hours = float(v.get("driving_hours") or 0)
         return "L3" if hours >= 3 or any(k in text for k in ("睁不开", "方向飘", "打瞌睡", "犯困")) else "L2"
     if intent in {"modify_pickup", "reroute", "cancel_order", "find_car", "charging"}: return "L2"
+    if intent == "robotaxi_dropoff":
+        controls = snapshot.get("perception_controls") or {}
+        env = snapshot.get("environment_state") or {}
+        parking = str(env.get("parking_policy") or "")
+        try:
+            curb = float(controls.get("curb_risk"))
+        except (TypeError, ValueError):
+            curb = None
+        if (curb is not None and curb > 60) or any(k in parking for k in ("禁停", "禁止", "不允许")):
+            return "L3"
+        return "L2"
+    if intent in {"family_long_trip", "airport_transfer"}: return "L2"
     if intent == "route_plan": return "L2"
     if intent == "human_support": return "L1"
     if intent in {"parent_child", "climate", "commute"}: return "L1"
@@ -68,6 +80,17 @@ def _hard_violations(intent: str, candidate_id: str, text: str, snapshot: Dict[s
                 violations.append(f"人车距离 {d:.1f}m 超过闪灯鸣笛 100m 限制")
         elif intent in {"reroute", "cancel_order"}:
             violations.append("订单/费用变更不得绕过用户确认")
+        elif intent == "robotaxi_dropoff":
+            controls = snapshot.get("perception_controls") or {}
+            parking = str(env.get("parking_policy") or "")
+            try:
+                curb = float(controls.get("curb_risk"))
+            except (TypeError, ValueError):
+                curb = None
+            if float(v.get("speed_kmh") or 0) > 0:
+                violations.append("车辆行驶中不得直接停车开门，必须先安全停靠")
+            if (curb is not None and curb > 60) or any(k in parking for k in ("禁停", "禁止", "不允许")):
+                violations.append("当前位置不满足安全停车/开门硬约束，不得就地停车解锁")
         elif intent == "route_plan":
             violations.append("导航目标变更不得绕过用户确认")
         elif intent == "charging" and float(v.get("soc_percent") or 100) <= 10:
@@ -132,5 +155,13 @@ def tool_allowed_for_intent(intent: str, tool: str) -> bool:
         "vehicle_status": {"get_vehicle_health", "transfer_to_human"},
         "human_support": {"transfer_to_human", "crm_agent"},
         "trip_status": {"get_order_status", "share_vehicle_location", "transfer_to_human"},
+        "family_long_trip": {"get_vehicle_health", "estimate_range_sufficiency", "find_charging_station",
+                             "find_rest_area", "detect_child_presence", "set_climate", "play_media",
+                             "set_ambient", "plan_route", "reserve_charging", "transfer_to_human"},
+        "airport_transfer": {"get_vehicle_health", "estimate_range_sufficiency", "set_climate",
+                             "set_ambient", "play_media", "find_charging_station", "plan_route",
+                             "transfer_to_human"},
+        "robotaxi_dropoff": {"get_order_status", "find_safe_stop_point", "request_curbside_stop",
+                             "check_curbside_safety", "unlock_door", "transfer_to_human"},
     }
     return tool in allowed.get(intent, set())

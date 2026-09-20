@@ -81,8 +81,13 @@ def execute_plan(steps: List[Dict[str, Any]], executor, snapshot: Dict[str, Any]
         deps = [str(x) for x in (step.get("depends_on") or [])]
         blocked_deps = [d for d in deps if status_by_id.get(d) not in {"done", "degraded"}]
         if blocked_deps:
-            step["status"] = "blocked_dependency"
-            step["note"] = "上游步骤未成功：" + "、".join(blocked_deps)
+            if all(status_by_id.get(d) in {"pending_confirm", "waiting_dependency"} for d in blocked_deps):
+                # 上游是待确认而非失败：本次不执行，但也不按失败/阻断处理，确认后继续。
+                step["status"] = "waiting_dependency"
+                step["note"] = "上游步骤待确认，确认后按计划继续：" + "、".join(blocked_deps)
+            else:
+                step["status"] = "blocked_dependency"
+                step["note"] = "上游步骤未成功：" + "、".join(blocked_deps)
             status_by_id[sid] = step["status"]
             executed_steps.append(step)
             continue
@@ -103,18 +108,36 @@ def execute_plan(steps: List[Dict[str, Any]], executor, snapshot: Dict[str, Any]
         if requires_confirm and not confirmed:
             step["status"] = "pending_confirm"
             step["confirmation_grant"] = grant
-            pending.append({"name": tool, "arguments": resolved_args, "step_id": sid,
+            pending.append({"name": tool, "title": step.get("title", ""),
+                            "arguments": resolved_args, "step_id": sid,
                             "depends_on": deps, "safety_level": meta.get("level", "L0"), **grant})
             status_by_id[sid] = step["status"]
             executed_steps.append(step)
             continue
         if requires_confirm and confirmed:
+            # 本 Run 内已确认执行过的步骤直接复用结果：多阶段确认链（停车→解锁）中，
+            # 不能把已完成的高风险写操作重新挂起，也不允许借重放重复执行。
+            prior = next(
+                (c for c in reversed(calls)
+                 if isinstance(c, dict) and c.get("tool") == tool
+                 and c.get("result") == "success" and c.get("arguments") == resolved_args),
+                None,
+            )
             expected = (confirmed_grants or {}).get(sid)
+            if prior and not expected:
+                step["status"] = "done"
+                step["note"] = "本 Run 内已确认执行，沿用可验证回执"
+                status_by_id[sid] = "done"
+                raw = prior.get("raw_result")
+                outputs[sid] = raw if isinstance(raw, dict) else {"success": True}
+                executed_steps.append(step)
+                continue
             if not expected or expected != grant["grant_id"]:
                 step["status"] = "pending_confirm"
                 step["note"] = "确认已失效：工具参数或实时状态版本发生变化，需要重新确认"
                 step["confirmation_grant"] = grant
-                pending.append({"name": tool, "arguments": resolved_args, "step_id": sid,
+                pending.append({"name": tool, "title": step.get("title", ""),
+                                "arguments": resolved_args, "step_id": sid,
                                 "depends_on": deps, "safety_level": meta.get("level", "L0"),
                                 "confirmation_invalidated": True, **grant})
                 status_by_id[sid] = step["status"]
@@ -142,7 +165,8 @@ def execute_plan(steps: List[Dict[str, Any]], executor, snapshot: Dict[str, Any]
             continue
         if result.get("status") == "pending_user_confirmation":
             step["status"] = "pending_confirm"
-            pending.append({"name": tool, "arguments": resolved_args, "step_id": sid,
+            pending.append({"name": tool, "title": step.get("title", ""),
+                            "arguments": resolved_args, "step_id": sid,
                             "depends_on": deps, "safety_level": meta.get("level", "L0")})
             status_by_id[sid] = step["status"]
             executed_steps.append(step)
@@ -185,7 +209,8 @@ def execute_plan(steps: List[Dict[str, Any]], executor, snapshot: Dict[str, Any]
                 fb_step["status"] = "pending_confirm"
                 fb_grant = make_grant(fb_tool, fb_args, snapshot)
                 fb_step["confirmation_grant"] = fb_grant
-                pending.append({"name": fb_tool, "arguments": fb_args, "step_id": fb_id, "depends_on": [],
+                pending.append({"name": fb_tool, "title": fb_step.get("title", ""),
+                                "arguments": fb_args, "step_id": fb_id, "depends_on": [],
                                 "safety_level": fb_meta.get("level", "L0"), **fb_grant})
                 executed_steps.append(fb_step)
             else:

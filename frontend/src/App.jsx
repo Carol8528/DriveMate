@@ -6,6 +6,9 @@ const EXTERNAL_LLM_ENGINE = "外接模型（语义理解）";
 
 const ownerActions = [
   ["我有点困", "我连续驾驶有些困倦，请先评估安全并给我建议"],
+  ["困但想继续开", "我很困，但我还能坚持，继续导航，帮我把空调调低一点让我清醒。"],
+  ["带孩子长途出行", "带孩子去上海，下午五点前到。孩子容易晕车，我不想中途没电，路上最好还能吃个饭。"],
+  ["赶飞机不迟到", "我六点半的航班，现在去机场。路上我要开个会，尽量走平稳一点的路线，别让我迟到。"],
   ["调节车内温度", "车内有点热，请帮我把温度调得舒适一些"],
   ["规划沿途补能", "请根据当前电量规划沿途补能"],
   ["带孩子出行", "带孩子出行，请帮我检查并设置舒适安全的座舱环境"],
@@ -13,6 +16,7 @@ const ownerActions = [
   ["开始路线导航", "请根据当前目的地规划路线"],
 ];
 const taxiActions = [
+  ["就在这里下车", "不用到目的地了，就这里停，我要下车。"],
   ["我找不到车", "我找不到接驾车辆，请帮我定位"],
   ["修改上车点", "我需要修改上车点"],
   ["修改目的地", "我需要修改本次行程目的地"],
@@ -64,6 +68,10 @@ const initialVehicle = {
   seat: 105,
   window: 0,
   ambient: 60,
+  match: 88,
+  distress: 18,
+  distance: 22,
+  curb: 24,
   destination: "上海外滩",
   order: "无订单",
   weather: "晴",
@@ -99,6 +107,12 @@ function snapshot(mode, vehicle) {
       area_type: "高速",
       parking_policy: "允许临停",
     },
+    perception_controls: {
+      passenger_match: vehicle.match,
+      distress_probability: vehicle.distress,
+      distance_m: vehicle.distance,
+      curb_risk: vehicle.curb,
+    },
   };
 }
 
@@ -128,9 +142,21 @@ function executionReceipt(data) {
     set_seat: "已完成座椅调节",
     play_music: "已播放舒缓音乐",
     find_rest_area: "已找到附近安全休息点",
-    plan_route: "已生成前往安全休息点的路线",
     create_crm_ticket: "已通知人工安全专员",
     contact_human_support: "已转接人工服务",
+  };
+  const describeCall = (call) => {
+    const tool = call.name || call.tool;
+    if (tool !== "plan_route") return actionLabels[tool] || call.title;
+    const args = call.arguments || {};
+    const rawDestination = args.destination;
+    const destination =
+      typeof rawDestination === "object"
+        ? rawDestination?.address || rawDestination?.name
+        : rawDestination;
+    const preference = args.preference === "comfort" ? "平稳优先" : "";
+    const deadline = args.arrive_by ? `（${args.arrive_by} 前到达）` : "";
+    return `已生成前往${destination || "当前目的地"}的${preference}路线${deadline}`;
   };
   const stateLabels = {
     "climate.temperature": ["座舱温度", "℃"],
@@ -149,7 +175,7 @@ function executionReceipt(data) {
         .filter((x) =>
           ["success", "done", "app_side"].includes(x.result || x.status),
         )
-        .map((x) => actionLabels[x.name || x.tool] || x.title)
+        .map((x) => describeCall(x))
         .filter(Boolean),
     ),
   ];
@@ -212,7 +238,6 @@ function ExecutionReceipt({ receipt }) {
 
 function confirmationText(pending = []) {
   const labels = {
-    plan_route: "开始导航至建议的安全休息点",
     modify_destination: "修改本次行程目的地",
     set_climate: "调整座舱温度",
     set_seat: "调整座椅位置",
@@ -220,8 +245,19 @@ function confirmationText(pending = []) {
     create_crm_ticket: "联系人工安全专员",
     contact_human_support: "转接人工服务",
   };
+  const describe = (item) => {
+    if (item.title) return item.title;
+    const tool = item.name || item.tool;
+    if (tool === "plan_route") {
+      const args = item.arguments || {};
+      const destination = args.destination || "当前目的地";
+      const preference = args.preference === "comfort" ? "平稳优先" : "";
+      return `开始导航至${destination}${preference ? `（${preference}）` : ""}`;
+    }
+    return labels[tool] || "执行建议操作";
+  };
   const actions = pending.map(
-    (item) => item.title || labels[item.name || item.tool] || "执行建议操作",
+    (item) => describe(item),
   );
   return actions.join("、");
 }
@@ -292,7 +328,46 @@ function Metric({ label, value, unit }) {
   );
 }
 
-function Cockpit({ mode, vehicle }) {
+function EditableMetric({ label, value, unit, min, max, step, onChange }) {
+  return (
+    <div className="metric editable">
+      <span>{label}</span>
+      <strong>
+        <input
+          className="metric-input"
+          type="number"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(e) => {
+            const next = Number(e.target.value);
+            if (!Number.isNaN(next)) {
+              onChange(Math.min(max, Math.max(min, next)));
+            }
+          }}
+        />
+        <small>{unit}</small>
+      </strong>
+      <input
+        className="metric-slider"
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
+    </div>
+  );
+}
+function Cockpit({ mode, vehicle, setVehicle }) {
+  const adjustables = [
+    ["剩余电量", "soc", 0, 100, 1, "%"],
+    ["预计续航", "range", 0, 800, 1, " km"],
+    ["连续驾驶", "hours", 0, 12, 0.5, " h"],
+    ["本程里程", "trip", 0, 999, 0.1, " km"],
+  ];
   return (
     <section className="panel cockpit">
       <PanelHead
@@ -328,10 +403,18 @@ function Cockpit({ mode, vehicle }) {
         </div>
       </div>
       <div className="metrics">
-        <Metric label="剩余电量" value={vehicle.soc} unit="%" />
-        <Metric label="预计续航" value={vehicle.range} unit=" km" />
-        <Metric label="连续驾驶" value={vehicle.hours} unit=" h" />
-        <Metric label="本程里程" value={vehicle.trip.toFixed(1)} unit=" km" />
+        {adjustables.map(([label, key, min, max, step, unit]) => (
+          <EditableMetric
+            key={key}
+            label={label}
+            unit={unit}
+            min={min}
+            max={max}
+            step={step}
+            value={vehicle[key]}
+            onChange={(next) => setVehicle((v) => ({ ...v, [key]: next }))}
+          />
+        ))}
       </div>
       <div className="cabin-state">
         <div>
@@ -430,7 +513,13 @@ function Control({ vehicle, setVehicle }) {
     </div>
   );
 }
-function Perception({ run }) {
+function Perception({ run, vehicle, setVehicle }) {
+  const adjustables = [
+    ["视觉匹配", "match", 0, 100, 1, "%"],
+    ["求助声学线索", "distress", 0, 100, 1, "%"],
+    ["人车距离", "distance", 0, 500, 1, " m"],
+    ["路缘风险", "curb", 0, 100, 1, "%"],
+  ];
   const fusion = run?.perception_fusion;
   const items = nonEmptyList(fusion?.modalities, [
     {
@@ -497,6 +586,32 @@ function Perception({ run }) {
             </footer>
           </div>
         ))}
+      </div>
+      <div className="control-grid perception-controls">
+        {adjustables.map(([label, key, min, max, step, unit]) => (
+          <label className="control" key={key}>
+            <span>
+              {label}
+              <strong>
+                {vehicle[key]}
+                {unit}
+              </strong>
+            </span>
+            <input
+              type="range"
+              min={min}
+              max={max}
+              step={step}
+              value={vehicle[key]}
+              onChange={(e) =>
+                setVehicle((v) => ({ ...v, [key]: Number(e.target.value) }))
+              }
+            />
+          </label>
+        ))}
+      </div>
+      <div className="notice">
+        拖动滑块可手动调整四项感知输入，下一次对话将按调整后的数值重新融合。
       </div>
       <div className="fusion-pipeline" aria-label="融合处理流程">
         <span>四路输入</span>
@@ -888,23 +1003,24 @@ function Command({
   setVehicle,
   audit,
   loadAudit,
+  messages,
 }) {
   const content = {
     navigation: <Navigation vehicle={vehicle} setVehicle={setVehicle} />,
     control: <Control vehicle={vehicle} setVehicle={setVehicle} />,
-    perception: <Perception run={run} />,
+    perception: <Perception run={run} vehicle={vehicle} setVehicle={setVehicle} />,
     orchestration: (
       <Orchestration run={run} audit={audit} loadAudit={loadAudit} />
     ),
     safety: <Safety run={run} vehicle={vehicle} />,
-    memory: null,
+    memory: <Memory messages={messages} />,
   };
   return (
     <section className="panel command">
       <PanelHead
         eyebrow="MISSION CONTROL"
         title="智能中控"
-        status={`当前风险 ${run?.risk_level || "L0"}`}
+        status={view === "memory" ? "当前会话" : `当前风险 ${run?.risk_level || "L0"}`}
       />
       <nav className="tabs">
         {Object.entries(viewLabels).map(([key, label]) => (
@@ -990,7 +1106,7 @@ function Chat({
       <div className="thread" ref={threadRef}>
         {messages.length === 0 && (
           <div className="assistant bubble">
-            你好，我是 DriveMate。告诉我你的出行或座舱需求。
+            你好呀，我是小D，有任何需要都可以和我说~
           </div>
         )}
         {messages.map((m, i) => (
@@ -1099,7 +1215,11 @@ export default function App() {
   }, []);
   useEffect(() => {
     const id = setInterval(
-      () => setVehicle((v) => ({ ...v, trip: v.trip + v.speed / 7200 })),
+      () =>
+        setVehicle((v) => ({
+          ...v,
+          trip: Math.round((v.trip + v.speed / 7200) * 10) / 10,
+        })),
       2000,
     );
     return () => clearInterval(id);
@@ -1169,8 +1289,6 @@ export default function App() {
     const id = setTimeout(() => setToast(""), 2600);
     return () => clearTimeout(id);
   }, [toast]);
-  const effectiveView =
-    view === "memory" ? <Memory messages={messages} /> : null;
   return (
     <main data-theme={theme}>
       <Header
@@ -1182,38 +1300,17 @@ export default function App() {
         meta={meta}
       />
       <div className="workspace">
-        <Cockpit mode={mode} vehicle={vehicle} />
-        {effectiveView ? (
-          <section className="panel command">
-            <PanelHead
-              eyebrow="MISSION CONTROL"
-              title="智能中控"
-              status="当前会话"
-            />
-            <nav className="tabs">
-              {Object.entries(viewLabels).map(([key, label]) => (
-                <button
-                  className={view === key ? "active" : ""}
-                  onClick={() => setView(key)}
-                  key={key}
-                >
-                  {label}
-                </button>
-              ))}
-            </nav>
-            {effectiveView}
-          </section>
-        ) : (
-          <Command
-            view={view}
-            setView={setView}
-            run={run}
-            vehicle={vehicle}
-            setVehicle={setVehicle}
-            audit={audit}
-            loadAudit={loadAudit}
-          />
-        )}
+        <Cockpit mode={mode} vehicle={vehicle} setVehicle={setVehicle} />
+        <Command
+          view={view}
+          setView={setView}
+          run={run}
+          vehicle={vehicle}
+          setVehicle={setVehicle}
+          audit={audit}
+          loadAudit={loadAudit}
+          messages={messages}
+        />
         <Chat
           mode={mode}
           run={run}

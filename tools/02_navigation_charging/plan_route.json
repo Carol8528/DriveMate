@@ -26,10 +26,16 @@
           "shortest",
           "avoid_toll",
           "avoid_highway",
-          "scenic"
+          "scenic",
+          "comfort",
+          "energy_saving"
         ],
-        "description": "路线偏好（可选）",
+        "description": "路线偏好（可选）；comfort 表示平稳优先，energy_saving 表示低能耗优先",
         "default": "fastest"
+      },
+      "arrive_by": {
+        "type": "string",
+        "description": "要求到达时间（可选，24 小时制，如 17:00）"
       },
       "current_location": {
         "type": "object",

@@ -17,9 +17,10 @@ from components.audit_store import (
     put_idempotency_result,
 )
 from components.schema_validator import validate_arguments
-from components.safety_guard import authorize_tool, haversine_m
+from components.safety_guard import authorize_tool
 from components.vehicle_gateway import VehicleGateway, TOOL_ENDPOINTS
 from components.crm_agent import create_crm_ticket
+from perception_fusion import resolve_pedestrian_distance_m
 
 
 class ToolExecutor:
@@ -109,7 +110,34 @@ class ToolExecutor:
         if name == "get_vehicle_health":
             return ok("电量 %s%%，预估续航 %s km，无故障码" % (v.get("soc_percent"), v.get("range_km")), range_accuracy="high")
         if name == "find_charging_station":
-            return ok("沿途找到可用快充站", stations=[{"station_id": "cs_demo_01", "distance_km": 12, "idle_piles": 4}])
+            amenities = args.get("amenities") or []
+            station = {"station_id": "cs_demo_01", "distance_km": 12, "idle_piles": 4}
+            if "restaurant" in amenities:
+                station["amenities"] = ["restaurant", "restroom"]
+                station["restaurant"] = True
+                return ok("沿途找到可叠加用餐的快充站（含餐饮配套）", stations=[station])
+            return ok("沿途找到可用快充站", stations=[station])
+        if name == "estimate_range_sufficiency":
+            destination = str(args.get("destination") or "目的地")
+            try:
+                reserve = float(args.get("reserve_percent", 15))
+            except (TypeError, ValueError):
+                reserve = 15.0
+            reserve = min(50.0, max(0.0, reserve))
+            rng = float(v.get("range_km") or 0)
+            distance = args.get("distance_km")
+            estimated = False
+            if distance is None:
+                distance = float(o.get("distance_km") or 240)
+                estimated = True
+            distance = float(distance)
+            usable = rng * (1 - reserve / 100)
+            needs_charging = distance > usable
+            summary = ("预计里程 %.0f km（演示估算），可用续航（保留 %.0f%% 电量）约 %.0f km，%s"
+                       % (distance, reserve, usable, "需要途中补能" if needs_charging else "可直达"))
+            return ok(summary, needs_charging=needs_charging, distance_km=distance,
+                      usable_range_km=round(usable, 1), gap_km=round(distance - usable, 1),
+                      estimated=estimated)
         if name == "reserve_charging":
             return ok("快充桩预约成功", reservation_id="RSV-" + uuid.uuid4().hex[:12])
         if name == "get_charging_status":
@@ -118,12 +146,7 @@ class ToolExecutor:
             found = bool(v.get("child_seat_detected"))
             return ok("检测到儿童座椅" if found else "未检测到儿童座椅", child_detected=found)
         if name == "get_order_status":
-            p, q = o.get("passenger_coordinates") or {}, o.get("vehicle_coordinates") or {}
-            distance = None
-            try:
-                distance = round(haversine_m(float(p["lat"]), float(p["lng"]), float(q["lat"]), float(q["lng"])), 1)
-            except Exception:
-                pass
+            distance = resolve_pedestrian_distance_m(snap)
             return ok("订单状态 %s%s" % (o.get("status", "未知"), ("；车辆距乘客 %.1f 米" % distance) if distance is not None else "；实时距离不可用"), distance_m=distance)
         if name == "share_vehicle_location":
             return ok("已生成车辆位置引导", share_ref="AR-DEMO")
@@ -136,6 +159,57 @@ class ToolExecutor:
             candidate = {"lat": round(lat + 0.00045, 6), "lng": round(lng + 0.00012, 6),
                          "address": "前方合规临停点（演示道路策略）"}
             return ok("找到约 50-80 米内的合规替代上车点", candidate=candidate, policy="allow", walk_m=68)
+        if name == "find_safe_stop_point":
+            q = o.get("vehicle_coordinates") or {}
+            try:
+                lat, lng = float(q.get("lat")), float(q.get("lng"))
+            except Exception:
+                return {"success": False, "status": "invalid_state", "summary": "缺少车辆实时坐标，无法确定安全停车点。"}
+            controls = snap.get("perception_controls") or {}
+            parking = str(env.get("parking_policy") or "")
+            try:
+                curb = float(controls.get("curb_risk"))
+            except (TypeError, ValueError):
+                curb = None
+            current_safe = (curb is None or curb <= 60) and not any(k in parking for k in ("禁停", "禁止", "不允许"))
+            if current_safe:
+                candidate = {"lat": round(lat, 6), "lng": round(lng, 6), "address": "当前位置（合规临停区）"}
+                return ok("当前位置满足安全停靠条件", candidate=candidate, curb_side_safe=True)
+            candidate = {"lat": round(lat + 0.0005, 6), "lng": round(lng + 0.00014, 6),
+                         "address": "前方约 80 米合规临停点（演示道路策略）"}
+            return ok("当前位置不允许临停，已找到前方合规停车点", candidate=candidate, curb_side_safe=False)
+        if name == "check_curbside_safety":
+            controls = snap.get("perception_controls") or {}
+            blockers = []
+            try:
+                speed = float(v.get("speed_kmh"))
+            except (TypeError, ValueError):
+                speed = None
+            if speed is None:
+                blockers.append("缺少车速读数")
+            elif speed != 0:
+                blockers.append("车速 %.1f km/h 未归零" % speed)
+            gear = str(v.get("gear") or ("P" if speed == 0 else ""))
+            if gear != "P":
+                blockers.append("档位未处于 P 档")
+            try:
+                curb = float(controls.get("curb_risk"))
+            except (TypeError, ValueError):
+                curb = None
+            if curb is None:
+                blockers.append("缺少路缘安全读数")
+            elif curb > 60:
+                blockers.append("路缘风险 %.0f%%（右侧可能有来车/非机动车）" % curb)
+            parking = str(env.get("parking_policy") or "")
+            if any(k in parking for k in ("禁停", "禁止", "不允许")):
+                blockers.append("当前区域禁止临停")
+            side = str(args.get("side") or "right")
+            if blockers:
+                return ok("开门前安全检查未通过：" + "；".join(blockers),
+                          curb_side_safe=False, side=side, blockers=blockers,
+                          speed_kmh=speed, gear=gear)
+            return ok("开门前安全检查通过：车速 0、档位 P、路边环境安全",
+                      curb_side_safe=True, side=side, blockers=[], speed_kmh=speed, gear=gear)
         if name == "modify_pickup_point":
             return ok("新上车点已通过演示可停靠性校验并更新", approved=True, new_location=args.get("new_location"))
         if name == "modify_destination":

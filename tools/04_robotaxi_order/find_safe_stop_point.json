@@ -1,0 +1,29 @@
+{
+  "name": "find_safe_stop_point",
+  "domain": "robotaxi_order",
+  "description": "搜索合规安全临时停车点（用于乘客提前下车；当前位置不合法时生成前方替代停车点）",
+  "safety_level": "L1",
+  "idempotent": true,
+  "requires_confirmation": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "max_detour_m": {
+        "type": "integer",
+        "description": "最大绕行距离（米，可选，默认 150）",
+        "default": 150
+      },
+      "reason": {
+        "type": "string",
+        "enum": [
+          "passenger_request",
+          "safety_concern"
+        ],
+        "description": "查找原因"
+      }
+    },
+    "required": [
+      "reason"
+    ]
+  }
+}

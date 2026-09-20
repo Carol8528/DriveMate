@@ -13,6 +13,7 @@ from components.constraint_shield import plan_candidates
 from components.dependency_planner import execute_plan, DependencyError
 from components.decision_ledger import TraceRecorder, build_ledger
 from components.audit_store import log_decision_event
+from components.scenario_decomposer import build_complex_plan, decompose_scenario
 
 
 RISK_ORDER = {"L0": 0, "L1": 1, "L2": 2, "L3": 3}
@@ -94,8 +95,15 @@ def _plan_for(intent: str, text: str, mode: str, snap: dict, tool_meta: dict, se
                   {"destination": {"$from": "fatigue-rest", "path": "destination"}, "preference": "fastest"}, ["fatigue-rest"])
         )
         handoff_note = "；持续高疲劳风险已同步转接人工安全专员" if severe_handoff else ""
+        continue_request = any(k in text for k in ("继续", "坚持", "还能开", "赶路", "撑一下"))
+        if continue_request:
+            reply = (f"理解你想继续驾驶并保持清醒（当前连续驾驶约 {hours:g} 小时），但理解正确不等于允许执行："
+                     "高疲劳风险下，系统不会把“继续赶路”作为默认安全方案。允许执行的是可逆辅助：调低空调、座椅按摩、提神提醒；"
+                     f"同时已查询最近安全休息点{handoff_note}，建议确认后导航前往休息。")
+        else:
+            reply = f"检测到疲劳相关证据，当前连续驾驶约 {hours:g} 小时。系统先执行可逆的座舱辅助，并查询最近安全休息点{handoff_note}；导航属于行程变更，需确认后执行。"
         return {"plan_summary": "疲劳驾驶：状态复核 → 安全休息点 → 确认导航 + 可逆提神措施",
-                "reply": f"检测到疲劳相关证据，当前连续驾驶约 {hours:g} 小时。系统先执行可逆的座舱辅助，并查询最近安全休息点{handoff_note}；导航属于行程变更，需确认后执行。",
+                "reply": reply,
                 "safety_tip": "请勿把座椅按摩或音乐视为继续疲劳驾驶的替代方案，应尽快在安全地点停车休息。", "steps": steps}
 
     if intent == "parent_child":
@@ -205,6 +213,24 @@ def _plan_for(intent: str, text: str, mode: str, snap: dict, tool_meta: dict, se
                 "safety_tip": "订单/费用相关写操作必须显式确认，失败后不会自动重复提交。", "steps": steps}
 
     if intent == "cancel_order":
+        controls = snap.get("perception_controls")
+        controls = controls if isinstance(controls, dict) else {}
+        try:
+            curb_risk = float(controls.get("curb_risk"))
+        except (TypeError, ValueError):
+            curb_risk = None
+        if curb_risk is not None and curb_risk > 60:
+            steps = [
+                _step("cancel-status", 1, "读取订单状态与费用信息", "get_order_status", tool_meta, refresh_on_confirm=True),
+                _step("cancel-pickup-safe", 2, "搜索附近安全上车点", "find_safe_pickup_point", tool_meta,
+                      {"max_walk_m": 300}, ["cancel-status"], True),
+                _step("cancel-pickup-change", 3, "停靠到安全上车点", "modify_pickup_point", tool_meta,
+                      {"new_location": {"$from": "cancel-pickup-safe", "path": "candidate"}, "reason": "safety_concern"}, ["cancel-pickup-safe"]),
+                _step("cancel-write", 4, "安全停靠后取消订单", "cancel_order", tool_meta, {"reason": "passenger_initiated"}, ["cancel-pickup-change"]),
+            ]
+            return {"plan_summary": "临停风险拦截：状态复核 → 安全上车点 → 确认后停靠并取消",
+                    "reply": f"当前位置路缘风险约 {curb_risk:.0f}%，不允许临停，不会在这里停车。已改为先搜索附近安全上车点；你确认后车辆停靠到安全位置，再为你取消订单。",
+                    "safety_tip": "路口、消防通道、非机动车道和路缘风险超过 60% 的区域均不允许临停，便利性不能覆盖该硬约束。", "steps": steps}
         steps = [
             _step("cancel-status", 1, "读取订单状态与费用信息", "get_order_status", tool_meta, refresh_on_confirm=True),
             _step("cancel-write", 2, "取消订单", "cancel_order", tool_meta, {"reason": "passenger_initiated"}, ["cancel-status"]),
@@ -257,6 +283,7 @@ def _status_for_ui(status: str) -> str:
     # V5 UI 原契约只认识四类；blocked_dependency 用 failed 显示，但保留 note。
     if status in {"done", "pending_confirm", "failed", "cancelled"}: return status
     if status == "degraded": return "done"
+    if status == "waiting_dependency": return "pending_confirm"
     return "failed"
 
 
@@ -268,7 +295,16 @@ def run_rule(text: str, mode: str, snap: dict, executor, tool_meta: dict, confir
     with trace.stage("intent.resolve") as box:
         resolution = intent_resolution or resolve_intent(text, snapshot=snap, mode=mode)
         box["output"] = f"{resolution.get('selected_label')} · {resolution.get('confidence')}% · margin {resolution.get('margin')}"
-    if resolution.get("needs_clarification"):
+
+    # 复杂场景拆解：一句话含多个并存目标/约束/授权动作时，升级为多目标 DAG 链。
+    with trace.stage("scenario.decompose") as box:
+        decomposition = decompose_scenario(text, snap, mode)
+        box["output"] = (
+            f"{decomposition['label']} · {len(decomposition['goals'])} 个子目标"
+            if decomposition else "单目标场景，无需拆解"
+        )
+
+    if resolution.get("needs_clarification") and not decomposition:
         result = {"intent": "clarify", "risk_level": "L0", "plan_summary": "低置信输入：仅澄清，不执行工具",
                   "reply": clarification_reply(resolution), "steps": [], "calls": [], "pending_tools": [], "safety_tip": "无",
                   "intent_resolution": resolution}
@@ -277,7 +313,7 @@ def run_rule(text: str, mode: str, snap: dict, executor, tool_meta: dict, confir
         result["decision_ledger"] = build_ledger(resolution, shield, {"replans": [], "topology": {"nodes": 0, "cycles": 0, "order": []}}, trace.events)
         return result
 
-    intent = resolution["selected"]
+    intent = decomposition["scenario_id"] if decomposition else resolution["selected"]
     with trace.stage("constraint.plan") as box:
         shield = plan_candidates(intent, text, snap, mode)
         feasible = [c for c in shield["candidates"] if c["feasible"]]
@@ -291,7 +327,10 @@ def run_rule(text: str, mode: str, snap: dict, executor, tool_meta: dict, confir
         result["decision_ledger"] = build_ledger(resolution, shield, {"replans": [], "topology": {"nodes": 0, "cycles": 0, "order": []}}, trace.events)
         return result
 
-    plan = _plan_for(intent, text, mode, snap, tool_meta, semantic_slots=resolution.get("semantic_slots"))
+    if decomposition:
+        plan = build_complex_plan(decomposition, text, mode, snap, tool_meta)
+    else:
+        plan = _plan_for(intent, text, mode, snap, tool_meta, semantic_slots=resolution.get("semantic_slots"))
     if plan.get("clarify"):
         result = {"intent": intent, "risk_level": shield.get("risk_level", "L0"), "plan_summary": "语义参数不足：执行前澄清",
                   "reply": plan["reply"], "steps": [], "calls": [], "pending_tools": [], "safety_tip": "无",
@@ -328,6 +367,8 @@ def run_rule(text: str, mode: str, snap: dict, executor, tool_meta: dict, confir
                              "state": "degraded" if execution.get("replans") else "nominal",
                              "replans": execution.get("replans", [])},
               "topology": execution.get("topology", {})}
+    if isinstance(plan.get("scenario_decomposition"), dict):
+        result["scenario_decomposition"] = plan["scenario_decomposition"]
     result["decision_ledger"] = build_ledger(resolution, shield, execution, trace.events)
 
     run_id = getattr(executor, "run_id", None)
@@ -336,6 +377,8 @@ def run_rule(text: str, mode: str, snap: dict, executor, tool_meta: dict, confir
             log_decision_event(run_id, event["stage"], {"output": event.get("output")}, event.get("duration_ms"))
         log_decision_event(run_id, "intent.snapshot", resolution)
         log_decision_event(run_id, "constraint.snapshot", shield)
+        if isinstance(plan.get("scenario_decomposition"), dict):
+            log_decision_event(run_id, "decomposition.snapshot", plan["scenario_decomposition"])
         if execution.get("replans"):
             log_decision_event(run_id, "recovery.snapshot", {"replans": execution["replans"]})
     return result

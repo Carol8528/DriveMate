@@ -32,6 +32,13 @@
       "distance_max": {
         "type": "integer",
         "description": "最大搜索距离（km，可选）"
+      },
+      "amenities": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "需要的站点配套（可选，如 restaurant 餐饮、restroom 卫生间）"
       }
     },
     "required": [

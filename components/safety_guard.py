@@ -48,4 +48,56 @@ def authorize_tool(name: str, meta: Dict[str, Any], snap: Dict[str, Any], confir
             }
         return True, "ok", {"distance_verified": True, "distance_m": round(distance, 1), "limit_m": 100.0}
 
+    if name == "request_curbside_stop":
+        controls = snap.get("perception_controls") or {}
+        env = snap.get("environment_state") or {}
+        parking = str(env.get("parking_policy") or "")
+        try:
+            curb = float(controls.get("curb_risk"))
+        except (TypeError, ValueError):
+            curb = None
+        if curb is not None and curb > 60:
+            return False, "路缘风险 %.0f%% 超过 60%% 阈值，禁止在当前位置靠边停车。" % curb, {
+                "status": "safety_blocked", "curb_side_safe": False}
+        if any(k in parking for k in ("禁停", "禁止", "不允许")):
+            return False, "当前区域禁止临停，禁止在此靠边停车。", {
+                "status": "safety_blocked", "curb_side_safe": False}
+        return True, "ok", {"curb_side_safe": True}
+
+    if name == "unlock_door":
+        # 确定性前置条件：speed == 0 AND gear == P AND curb_side_safe AND vehicle_state_valid。
+        # 理解用户意图不构成执行授权；此处只认最新 StateSnapshot。
+        v = snap.get("vehicle_state") or {}
+        env = snap.get("environment_state") or {}
+        controls = snap.get("perception_controls") or {}
+        blockers = []
+        try:
+            speed = float(v.get("speed_kmh"))
+        except (TypeError, ValueError):
+            speed = None
+        if speed is None:
+            blockers.append("车辆状态无效：缺少车速读数")
+        elif speed != 0:
+            blockers.append("车速 %.1f km/h 未归零" % speed)
+        gear = str(v.get("gear") or ("P" if speed == 0 else ""))
+        if gear != "P":
+            blockers.append("档位未处于 P 档")
+        try:
+            curb = float(controls.get("curb_risk"))
+        except (TypeError, ValueError):
+            curb = None
+        if curb is None:
+            blockers.append("缺少路缘安全读数")
+        elif curb > 60:
+            blockers.append("路缘风险 %.0f%% 超过安全阈值" % curb)
+        parking = str(env.get("parking_policy") or "")
+        if any(k in parking for k in ("禁停", "禁止", "不允许")):
+            blockers.append("当前区域禁止临停")
+        if blockers:
+            return False, "开门硬条件不满足：" + "；".join(blockers), {
+                "status": "safety_blocked", "curb_side_safe": False,
+                "speed_kmh": speed, "gear": gear, "vehicle_state_valid": speed is not None}
+        return True, "ok", {"curb_side_safe": True, "speed_kmh": speed, "gear": gear,
+                            "vehicle_state_valid": True}
+
     return True, "ok", {}

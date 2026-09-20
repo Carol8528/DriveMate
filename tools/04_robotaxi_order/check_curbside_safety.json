@@ -1,0 +1,25 @@
+{
+  "name": "check_curbside_safety",
+  "domain": "robotaxi_order",
+  "description": "开门前路边环境安全检查（车速归零、档位 P、路缘风险与禁停策略的确定性校验）",
+  "safety_level": "L1",
+  "idempotent": true,
+  "requires_confirmation": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "side": {
+        "type": "string",
+        "enum": [
+          "left",
+          "right"
+        ],
+        "description": "车门侧（默认 right）",
+        "default": "right"
+      }
+    },
+    "required": [
+      "side"
+    ]
+  }
+}
