@@ -1158,8 +1158,8 @@ function Chat({
               </div>
             </div>
             <div className="confirm-actions">
-              <button onClick={confirm}>确认执行</button>
-              <button className="secondary" onClick={cancel}>
+              <button onClick={confirm} disabled={busy}>确认执行</button>
+              <button className="secondary" onClick={cancel} disabled={busy}>
                 取消
               </button>
             </div>
@@ -1227,6 +1227,7 @@ export default function App() {
     [engine, setEngine] = useState(LOCAL_ENGINE),
     [toast, setToast] = useState("");
   const session = useRef(null);
+  const actionInFlight = useRef(false);
   const snap = useMemo(() => snapshot(mode, vehicle), [mode, vehicle]);
   useEffect(() => {
     Promise.all([api.health(), api.meta()])
@@ -1290,6 +1291,8 @@ export default function App() {
     );
   };
   const action = async (work, responseRole = "assistant") => {
+    if (actionInFlight.current) return;
+    actionInFlight.current = true;
     setBusy(true);
     setError("");
     try {
@@ -1297,10 +1300,12 @@ export default function App() {
     } catch (e) {
       setError(e.message);
     } finally {
+      actionInFlight.current = false;
       setBusy(false);
     }
   };
   const send = (text) => {
+    if (actionInFlight.current) return;
     setMessages((m) => [...m, { role: "user", content: text }]);
     setView("orchestration");
     action(() =>

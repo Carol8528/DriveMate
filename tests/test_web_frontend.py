@@ -50,6 +50,17 @@ class WebFrontendContractTests(unittest.TestCase):
         self.assertIn('"vehicle_motion.speed_kmh":"speed"', self.compact_app)
         self.assertIn('gear:vehicle.gear', self.compact_app)
 
+    def test_confirmation_cannot_submit_duplicate_receipts(self):
+        self.assertIn("constactionInFlight=useRef(false);", self.compact_app)
+        self.assertIn("if(actionInFlight.current)return;", self.compact_app)
+        self.assertIn("actionInFlight.current=true;", self.compact_app)
+        self.assertIn("actionInFlight.current=false;", self.compact_app)
+        self.assertIn("<buttononClick={confirm}disabled={busy}>确认执行</button>", self.compact_app)
+        self.assertIn(
+            '<buttonclassName="secondary"onClick={cancel}disabled={busy}>',
+            self.compact_app,
+        )
+
     def test_safety_score_has_no_fixed_risk_level_fallback(self):
         self.assertIn('constscore=run?.safety_score;', self.compact_app)
         self.assertIn('动态安全评分', self.app)
