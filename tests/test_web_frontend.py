@@ -88,6 +88,17 @@ class WebFrontendContractTests(unittest.TestCase):
         self.assertIn('"vehicle_motion.speed_kmh":"speed"', self.compact_app)
         self.assertIn('gear:vehicle.gear', self.compact_app)
 
+    def test_orchestration_status_color_follows_run_status(self):
+        self.assertIn('["failed","blocked"].includes(runStatusKey)?"error"', self.compact_app)
+        self.assertIn('<spanclassName={`status-${runStatusTone}`}>{runStatus}</span>', self.compact_app)
+        self.assertIn(".orchestration-run-metaspan.status-error{color:var(--danger)", self.compact_css)
+        self.assertIn("functionexecutionStatusTone(status)", self.compact_app)
+        self.assertIn(
+            "executionStatusTone(steps[i].status_raw||steps[i].status)",
+            self.compact_app,
+        )
+        self.assertIn(".orchestration-evidenceliem.status-error{color:var(--danger)", self.compact_css)
+
     def test_confirmation_cannot_submit_duplicate_receipts(self):
         self.assertIn("constactionInFlight=useRef(false);", self.compact_app)
         self.assertIn("if(actionInFlight.current)return;", self.compact_app)

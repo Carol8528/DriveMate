@@ -688,9 +688,17 @@ main[data-theme="dark"] {
   color: var(--success);
   background: color-mix(in srgb, var(--success) 10%, transparent);
 }
-.orchestration-run-meta span.waiting {
+.orchestration-run-meta span.status-warning {
   color: var(--warning);
   background: color-mix(in srgb, var(--warning) 10%, transparent);
+}
+.orchestration-run-meta span.status-error {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+.orchestration-run-meta span.status-cancelled {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--muted) 10%, transparent);
 }
 .orchestration-run-meta small {
   display: block;
@@ -819,6 +827,20 @@ main[data-theme="dark"] {
   color: var(--muted);
   font-size: 9px;
   font-style: normal;
+}
+.orchestration-evidence li em.status-error {
+  color: var(--danger);
+  font-weight: 700;
+}
+.orchestration-evidence li em.status-warning {
+  color: var(--warning);
+}
+.orchestration-evidence li em.status-success {
+  color: var(--success);
+}
+.orchestration-evidence li em.status-cancelled {
+  color: var(--muted);
+  text-decoration: line-through;
 }
 .orchestration-readback {
   display: flex;

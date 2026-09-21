@@ -51,6 +51,34 @@ const modalityIcons = {
 function nonEmptyList(value, fallback) {
   return Array.isArray(value) && value.length > 0 ? value : fallback;
 }
+function executionStatusTone(status) {
+  if (
+    [
+      "failed",
+      "blocked",
+      "blocked_dependency",
+      "safety_blocked",
+      "schema_invalid",
+      "unauthorized",
+    ].includes(status)
+  ) {
+    return "error";
+  }
+  if (
+    [
+      "pending_confirm",
+      "pending_user_confirmation",
+      "waiting",
+      "waiting_dependency",
+      "degraded",
+    ].includes(status)
+  ) {
+    return "warning";
+  }
+  if (status === "cancelled") return "cancelled";
+  if (["done", "success", "executed", "app_side"].includes(status)) return "success";
+  return "neutral";
+}
 const riskLabels = {
   L0: "低风险",
   L1: "需要关注",
@@ -799,9 +827,17 @@ function Orchestration({ run, audit, loadAudit }) {
     blocked: "已阻断",
     cancelled: "已取消",
   };
-  const runStatus = isWaiting
-    ? "等待确认"
-    : statusLabels[run?.run_status || run?.status] || "运行中";
+  const runStatusKey = isWaiting
+    ? "waiting_confirmation"
+    : run?.run_status || run?.status || "running";
+  const runStatus = statusLabels[runStatusKey] || "运行中";
+  const runStatusTone = ["failed", "blocked"].includes(runStatusKey)
+    ? "error"
+    : ["waiting_confirmation", "degraded"].includes(runStatusKey)
+      ? "warning"
+      : runStatusKey === "cancelled"
+        ? "cancelled"
+        : "success";
   const outcome = run?.action_outcome;
   return (
     <div className="view orchestration-view">
@@ -820,7 +856,7 @@ function Orchestration({ run, audit, loadAudit }) {
               </small>
             </div>
             <div className="orchestration-run-meta">
-              <span className={isWaiting ? "waiting" : ""}>{runStatus}</span>
+              <span className={`status-${runStatusTone}`}>{runStatus}</span>
               <small>{run.run_id || "当前任务"}</small>
             </div>
             <div className="orchestration-progress-track">
@@ -851,7 +887,11 @@ function Orchestration({ run, audit, loadAudit }) {
                   <li key={`${item}-${i}`}>
                     <i>{String(i + 1).padStart(2, "0")}</i>
                     <span>{item}</span>
-                    {steps[i]?.status && <em>{steps[i].status}</em>}
+                    {steps[i]?.status && (
+                      <em className={`status-${executionStatusTone(steps[i].status_raw || steps[i].status)}`}>
+                        {steps[i].status}
+                      </em>
+                    )}
                   </li>
                 ))}
               </ol>
@@ -872,7 +912,11 @@ function Orchestration({ run, audit, loadAudit }) {
                           {call.receipt_id || call.summary || call.result || "已记录"}
                         </small>
                       </span>
-                      {call.status && <em>{call.status}</em>}
+                      {(call.status || call.result) && (
+                        <em className={`status-${executionStatusTone(call.status || call.result)}`}>
+                          {call.status || call.result}
+                        </em>
+                      )}
                     </li>
                   ),
                 )}
