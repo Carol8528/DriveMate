@@ -912,11 +912,11 @@ main[data-theme="dark"] {
   border-radius: 50%;
   background: conic-gradient(
     from 220deg,
-    var(--line) 0 14%,
-    var(--risk-tone) 14% 82%,
-    var(--line) 82%
+    var(--risk-tone) 0 calc(var(--score) * 1%),
+    var(--line) calc(var(--score) * 1%) 100%
   );
   box-shadow: 0 10px 26px color-mix(in srgb, var(--risk-tone) 18%, transparent);
+  transition: background 240ms ease, box-shadow 240ms ease;
 }
 .safety-halo > div {
   width: 102px;

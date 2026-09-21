@@ -44,6 +44,23 @@ class WebFrontendContractTests(unittest.TestCase):
         self.assertIn('`已生成前往${destination||"当前目的地"}的${preference}路线${deadline}`', self.compact_app)
         self.assertNotIn('plan_route:"已生成前往安全休息点的路线"', self.compact_app)
 
+    def test_confirmation_receipt_and_vehicle_readback_follow_run_evidence(self):
+        self.assertIn('failed:["执行未完成，已安全阻断"', self.compact_app)
+        self.assertIn('waiting_confirmation:["阶段执行完成，等待下一步确认"', self.compact_app)
+        self.assertIn('"vehicle_motion.speed_kmh":"speed"', self.compact_app)
+        self.assertIn('gear:vehicle.gear', self.compact_app)
+
+    def test_safety_score_has_no_fixed_risk_level_fallback(self):
+        self.assertIn('constscore=run?.safety_score;', self.compact_app)
+        self.assertIn('动态安全评分', self.app)
+        self.assertNotIn('{L0:94,L1:82,L2:62,L3:38}', self.compact_app)
+
+    def test_safety_ring_tracks_score_value_and_color(self):
+        self.assertIn('constnormalizedScore=Math.max(0,Math.min(100,Number(score)||0));', self.compact_app)
+        self.assertIn('"--score":normalizedScore', self.compact_app)
+        self.assertIn('"--risk-tone":scoreTone', self.compact_app)
+        self.assertIn('var(--risk-tone)0calc(var(--score)*1%)', self.compact_css)
+
     def test_memory_view_reuses_icon_navigation(self):
         self.assertIn('memory:<Memorymessages={messages}/>', self.compact_app)
         self.assertIn('<i>{viewIcons[key]}</i><span>{label}</span>', self.compact_app)

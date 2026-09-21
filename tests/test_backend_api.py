@@ -7,6 +7,7 @@ import unittest
 
 import requests
 
+from backend_service import AgentRunService
 from start_demo import (
     _free_local_port,
     _wait_for_authenticated_health,
@@ -167,6 +168,24 @@ class BackendApiTests(unittest.TestCase):
             json=payload,
             timeout=15,
         )
+
+    def test_curbside_stop_receipt_reconciles_frontend_motion_state(self):
+        snapshot = self.taxi_snapshot()
+        snapshot["vehicle_state"].update({"speed_kmh": 72, "gear": "D"})
+        changes = AgentRunService._state_diff(
+            {},
+            {},
+            [
+                {
+                    "tool": "request_curbside_stop",
+                    "result": "success",
+                    "raw_result": {"speed_kmh": 0, "gear": "P"},
+                }
+            ],
+            snapshot,
+        )
+        self.assertEqual(changes["vehicle_motion.speed_kmh"]["after"], 0)
+        self.assertEqual(changes["vehicle_motion.gear"]["after"], "P")
 
     def test_authentication_and_sanitized_metadata(self):
         unauthorized = requests.get(

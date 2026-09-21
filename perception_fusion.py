@@ -612,3 +612,27 @@ def summarize_action_outcome(result: JsonObject) -> JsonObject:
         "receipt_count": receipt_count,
         "state_change_count": len(state_diff),
     }
+
+
+def calculate_safety_score(result: JsonObject) -> int:
+    """Calculate a run-specific safety score from live risk and execution evidence."""
+    fusion = result.get("perception_fusion")
+    fusion = fusion if isinstance(fusion, dict) else {}
+    try:
+        perception_risk = float(fusion.get("risk_score") or 0)
+    except (TypeError, ValueError):
+        perception_risk = 0.0
+    perception_risk = max(0.0, min(100.0, perception_risk))
+
+    level_risk = {"L0": 0, "L1": 25, "L2": 55, "L3": 85}.get(
+        str(result.get("risk_level") or "L0"), 0
+    )
+    run_status = str(result.get("run_status") or result.get("status") or "")
+    status_penalty = {
+        "waiting_confirmation": 3,
+        "degraded": 8,
+        "failed": 15,
+        "cancelled": 5,
+    }.get(run_status, 0)
+    combined_risk = perception_risk * 0.7 + level_risk * 0.3 + status_penalty
+    return round(max(0.0, min(100.0, 100.0 - combined_risk)))

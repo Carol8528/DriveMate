@@ -62,6 +62,7 @@ const initialVehicle = {
   soc: 80,
   range: 450,
   hours: 3.5,
+  gear: "D",
   trip: 0,
   temperature: 24,
   fan: 2,
@@ -87,6 +88,7 @@ function snapshot(mode, vehicle) {
     },
     vehicle_state: {
       speed_kmh: vehicle.speed,
+      gear: vehicle.gear,
       soc_percent: vehicle.soc,
       range_km: vehicle.range,
       driving_hours: vehicle.hours,
@@ -128,6 +130,8 @@ function applyDiff(vehicle, diff = {}) {
     "window.open_percent": "window",
     "ambient_light.brightness": "ambient",
     "navigation.destination": "destination",
+    "vehicle_motion.speed_kmh": "speed",
+    "vehicle_motion.gear": "gear",
   };
   Object.entries(map).forEach(([path, key]) => {
     if (diff[path]?.after !== undefined) next[key] = diff[path].after;
@@ -186,11 +190,22 @@ function executionReceipt(data) {
       return { label, before: value?.before, after: value.after, unit };
     })
     .filter(Boolean);
+  const outcome = data.action_outcome || {};
+  const status = data.run_status || outcome.status;
+  const receiptCopy = {
+    completed: ["已按确认完成执行", "以下操作已经执行，最新状态已同步到驾驶舱。"],
+    degraded: ["部分操作已完成", "部分操作降级执行，请查看服务编排中的实际回执。"],
+    failed: ["执行未完成，已安全阻断", "系统未宣称执行成功，请查看被阻断步骤及原因。"],
+    cancelled: ["已取消待确认操作", "未继续执行车辆或订单操作。"],
+    waiting_confirmation: ["阶段执行完成，等待下一步确认", "已同步最新车辆状态，后续高风险动作需要再次确认。"],
+  };
+  const [title, summary] = receiptCopy[status] ||
+    (data.pending_tools?.length
+      ? receiptCopy.waiting_confirmation
+      : [outcome.title || "已返回执行结果", outcome.detail || "请查看本轮服务编排回执。"]);
   return {
-    title: "已按确认完成执行",
-    summary: completed.length
-      ? "以下操作已经执行，最新状态已同步到驾驶舱。"
-      : "安全校验已完成，最新状态已同步到驾驶舱。",
+    title,
+    summary,
     actions: completed,
     changes,
     note: "你可以继续告诉我下一步需求。",
@@ -671,19 +686,25 @@ function Orchestration({ run, audit, loadAudit }) {
   );
   const calls = run?.calls || [];
   const completed = phases.filter((phase) => phase.status === "done").length;
+  const stoppedPhase = phases.find((phase) =>
+    ["failed", "cancelled"].includes(phase.status),
+  );
   const activePhase = phases.find((phase) =>
     ["active", "waiting", "pending_confirm"].includes(phase.status),
   );
   const isWaiting = Boolean(run?.pending_tools?.length);
   const currentPhase = activePhase
     ? phaseLabels[activePhase.name] || activePhase.name
-    : completed === phases.length && run
+    : stoppedPhase
+      ? `${phaseLabels[stoppedPhase.name] || stoppedPhase.name}未完成`
+      : completed === phases.length && run
       ? "流程已完成"
       : "等待任务";
   const statusLabels = {
     completed: "执行完成",
     waiting_confirmation: "等待确认",
     failed: "执行失败",
+    degraded: "降级完成",
     blocked: "已阻断",
     cancelled: "已取消",
   };
@@ -800,7 +821,9 @@ function Orchestration({ run, audit, loadAudit }) {
 }
 function Safety({ run, vehicle }) {
   const risk = run?.risk_level || "L0";
-  const score = run?.safety_score ?? { L0: 94, L1: 82, L2: 62, L3: 38 }[risk];
+  const score = run?.safety_score;
+  const normalizedScore = Math.max(0, Math.min(100, Number(score) || 0));
+  const scoreTone = `hsl(${Math.round(normalizedScore * 1.2)} 76% 40%)`;
   const phases =
     run?.phases ||
     [
@@ -849,12 +872,15 @@ function Safety({ run, vehicle }) {
         title="主动安全守护"
         text="融合环境、驾驶员和任务风险给出安全结论"
       />
-      <div className={`safety-console ${risk}`}>
+      <div
+        className={`safety-console ${risk}`}
+        style={{ "--score": normalizedScore, "--risk-tone": scoreTone }}
+      >
         <div className="safety-stage">
           <div className="safety-halo">
             <div>
-              <span>安全评分</span>
-              <strong>{score}</strong>
+              <span title="由融合风险、任务等级与执行状态动态计算">动态安全评分</span>
+              <strong>{score ?? "--"}</strong>
               <em>
                 {risk} · {riskLabels[risk]}
               </em>
@@ -1234,6 +1260,7 @@ export default function App() {
     setVehicle({
       ...initialVehicle,
       speed: value === "taxi" ? 72 : 80,
+      gear: "D",
       order: value === "taxi" ? "arriving（即将到达）" : "无订单",
     });
   };
@@ -1252,7 +1279,15 @@ export default function App() {
             : data.reply || "任务已完成。",
       },
     ]);
-    setToast(data.pending_tools?.length ? "等待你的安全确认" : "任务处理完成");
+    setToast(
+      data.pending_tools?.length
+        ? "等待你的安全确认"
+        : data.run_status === "completed"
+          ? "任务处理完成"
+          : data.run_status === "failed"
+            ? "执行未完成，已安全阻断"
+            : "任务状态已更新",
+    );
   };
   const action = async (work, responseRole = "assistant") => {
     setBusy(true);

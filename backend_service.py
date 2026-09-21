@@ -27,7 +27,11 @@ from components.rule_engine import run_rule
 from components.tool_executor import ToolExecutor
 from components.tool_registry import load_tool_registry
 from components.vehicle_gateway import VehicleGateway
-from perception_fusion import fuse_perception, summarize_action_outcome
+from perception_fusion import (
+    calculate_safety_score,
+    fuse_perception,
+    summarize_action_outcome,
+)
 
 
 JsonObject = Dict[str, Any]
@@ -487,6 +491,7 @@ class AgentRunService:
             result["navigation"] = copy.deepcopy(previous["navigation"])
         result["phases"] = self._build_phases(result)
         result["action_outcome"] = summarize_action_outcome(result)
+        result["safety_score"] = calculate_safety_score(result)
         return result
 
     @staticmethod
@@ -691,6 +696,17 @@ class AgentRunService:
                 changes["order.status"] = {
                     "before": order_state.get("status"),
                     "after": "cancelled",
+                }
+            elif tool == "request_curbside_stop":
+                vehicle_state = snapshot.get("vehicle_state")
+                vehicle_state = vehicle_state if isinstance(vehicle_state, dict) else {}
+                changes["vehicle_motion.speed_kmh"] = {
+                    "before": vehicle_state.get("speed_kmh"),
+                    "after": raw.get("speed_kmh", 0),
+                }
+                changes["vehicle_motion.gear"] = {
+                    "before": vehicle_state.get("gear"),
+                    "after": raw.get("gear", "P"),
                 }
         return changes
 

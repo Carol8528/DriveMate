@@ -10,7 +10,11 @@ from urllib.parse import quote, urlparse
 
 import requests
 
-from perception_fusion import fuse_perception, summarize_action_outcome
+from perception_fusion import (
+    calculate_safety_score,
+    fuse_perception,
+    summarize_action_outcome,
+)
 
 
 JsonObject = Dict[str, Any]
@@ -587,12 +591,6 @@ class MockBackendClient:
             "calls": calls,
             "pending_tools": pending,
             "perception_fusion": perception_fusion,
-            "safety_score": {
-                "L0": 94,
-                "L1": 82,
-                "L2": 62,
-                "L3": 38,
-            }[risk],
             "run_status": (
                 "waiting_confirmation" if has_pending else "completed"
             ),
@@ -621,6 +619,7 @@ class MockBackendClient:
             "topology": [step["tool"] for step in steps],
         }
         payload["action_outcome"] = summarize_action_outcome(payload)
+        payload["safety_score"] = calculate_safety_score(payload)
         result = validate_run_result(payload)
         with self._lock:
             self._runs[run_id] = {

@@ -3,6 +3,7 @@ import unittest
 from api_client import MockBackendClient
 from perception_fusion import (
     build_sensor_state,
+    calculate_safety_score,
     fuse_perception,
     summarize_action_outcome,
 )
@@ -82,6 +83,20 @@ class PerceptionFusionTests(unittest.TestCase):
         self.assertEqual(outcome["status"], "completed")
         self.assertEqual(outcome["receipt_count"], 1)
         self.assertEqual(outcome["state_change_count"], 1)
+
+    def test_safety_score_changes_with_live_risk_and_execution_status(self):
+        safe = {
+            "risk_level": "L1",
+            "run_status": "completed",
+            "perception_fusion": {"risk_score": 12},
+        }
+        unsafe = {
+            "risk_level": "L1",
+            "run_status": "failed",
+            "perception_fusion": {"risk_score": 72},
+        }
+        self.assertGreater(calculate_safety_score(safe), calculate_safety_score(unsafe))
+        self.assertNotEqual(calculate_safety_score(safe), 82)
 
     def test_mock_route_plan_preserves_destination_and_eta(self):
         snapshot = owner_snapshot()
