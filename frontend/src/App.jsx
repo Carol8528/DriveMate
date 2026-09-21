@@ -190,20 +190,87 @@ function executionReceipt(data) {
       return { label, before: value?.before, after: value.after, unit };
     })
     .filter(Boolean);
+  const failedStatuses = new Set([
+    "failed",
+    "blocked",
+    "safety_blocked",
+    "schema_invalid",
+    "unauthorized",
+  ]);
+  const blockedReasons = [
+    ...(data.steps || [])
+      .filter((step) =>
+        failedStatuses.has(step.status_raw || step.status),
+      )
+      .map((step) => {
+        const reason = String(step.note || "").trim();
+        if (
+          (step.status_raw || step.status) === "blocked_dependency" ||
+          /上游步骤未成功|等待依赖|waiting_dependency|blocked_dependency/.test(reason)
+        ) {
+          return "";
+        }
+        return reason
+          ? `${step.title || step.tool || "执行步骤"}：${reason}`
+          : step.title || step.tool;
+      }),
+    ...(data.calls || [])
+      .filter((call) =>
+        failedStatuses.has(call.result || call.status),
+      )
+      .map((call) => call.summary),
+    ...((data.constraint_shield?.candidates || [])
+      .flatMap((candidate) => candidate.hard_violations || [])),
+    data.error?.message,
+  ].filter(Boolean);
+  const uniqueBlockedReasons = [...new Set(blockedReasons)].slice(0, 3);
   const outcome = data.action_outcome || {};
-  const status = data.run_status || outcome.status;
+  const rawStatus = data.run_status || outcome.status;
+  const status = rawStatus === "cancelled"
+    ? "cancelled"
+    : data.pending_tools?.length || ["waiting", "waiting_confirmation"].includes(rawStatus)
+      ? "waiting_confirmation"
+      : rawStatus === "failed" || outcome.status === "blocked"
+        ? "failed"
+        : rawStatus === "degraded"
+          ? "degraded"
+          : outcome.status === "advisory"
+            ? "advisory"
+            : "completed";
   const receiptCopy = {
     completed: ["已按确认完成执行", "以下操作已经执行，最新状态已同步到驾驶舱。"],
     degraded: ["部分操作已完成", "部分操作降级执行，请查看服务编排中的实际回执。"],
     failed: ["执行未完成，已安全阻断", "系统未宣称执行成功，请查看被阻断步骤及原因。"],
     cancelled: ["已取消待确认操作", "未继续执行车辆或订单操作。"],
     waiting_confirmation: ["阶段执行完成，等待下一步确认", "已同步最新车辆状态，后续高风险动作需要再次确认。"],
+    advisory: ["已完成安全判断", "本轮仅提供建议，没有执行车辆或订单操作。"],
   };
-  const [title, summary] = receiptCopy[status] ||
+  const [title, defaultSummary] = receiptCopy[status] ||
     (data.pending_tools?.length
       ? receiptCopy.waiting_confirmation
       : [outcome.title || "已返回执行结果", outcome.detail || "请查看本轮服务编排回执。"]);
+  const summary = status === "failed" && uniqueBlockedReasons.length
+    ? `阻断原因：${uniqueBlockedReasons.join("；")}`
+    : defaultSummary;
+  const tone = status === "failed"
+    ? "error"
+    : status === "cancelled"
+      ? "cancelled"
+      : ["degraded", "waiting_confirmation"].includes(status)
+        ? "warning"
+        : status === "advisory"
+          ? "info"
+        : "success";
   return {
+    status,
+    tone,
+    icon: tone === "success"
+      ? "✓"
+      : ["error", "cancelled"].includes(tone)
+        ? "×"
+        : tone === "info"
+          ? "i"
+          : "!",
     title,
     summary,
     actions: completed,
@@ -214,9 +281,11 @@ function executionReceipt(data) {
 
 function ExecutionReceipt({ receipt }) {
   return (
-    <div className="receipt-card">
+    <div className={`receipt-card receipt-card-${receipt.tone}`}>
       <header>
-        <i>✓</i>
+        <i aria-label={receipt.tone === "error" ? "执行失败" : "执行状态"}>
+          {receipt.icon}
+        </i>
         <strong>{receipt.title}</strong>
       </header>
       <p>{receipt.summary}</p>
@@ -461,7 +530,12 @@ function Navigation({ vehicle, setVehicle }) {
   return (
     <div className="view">
       <ViewHead title="实时路线导航" text="结合车辆状态与道路环境持续更新" />
-      <div className="route-map" />
+      <figure className="route-map">
+        <img
+          src="/assets/figma-hmi/shanghai-route-map.svg"
+          alt="从上海虹桥火车站到上海外滩的完整导航路线"
+        />
+      </figure>
       <div className="route-info">
         <label>
           当前位置<strong>上海虹桥火车站</strong>
@@ -1136,7 +1210,12 @@ function Chat({
           </div>
         )}
         {messages.map((m, i) => (
-          <div className={`${m.role} bubble`} key={i}>
+          <div
+            className={`${m.role} bubble ${
+              m.role === "receipt" ? `receipt-${m.content.tone}` : ""
+            }`}
+            key={i}
+          >
             {m.role === "receipt" ? (
               <ExecutionReceipt receipt={m.content} />
             ) : (

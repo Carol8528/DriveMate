@@ -1,5 +1,13 @@
+@font-face {
+  font-family: "DriveMate YaHei";
+  src:
+    local("Microsoft YaHei UI"),
+    local("Microsoft YaHei");
+  font-display: swap;
+}
+
 :root {
-  font-family: "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+  font-family: "DriveMate YaHei", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
   color: #203047;
   background: #edf6fb;
   font-synthesis: none;
@@ -17,6 +25,11 @@
   --danger: #c83f54;
   --shadow: 0 14px 38px rgba(43, 76, 113, 0.12);
   --r: 18px;
+}
+html,
+body,
+#root {
+  font-family: "DriveMate YaHei", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
 }
 * {
   box-sizing: border-box;
@@ -447,13 +460,22 @@ main[data-theme="dark"] {
 }
 .route-map {
   position: relative;
-  min-height: 210px;
-  flex: 1;
+  width: 100%;
+  min-height: 0;
+  aspect-ratio: 12 / 5;
+  flex: 0 0 auto;
+  margin: 0;
   border: 1px solid var(--line);
   border-radius: 13px;
-  background: var(--card) url("/assets/figma-hmi/shanghai-route-map.svg")
-    center/cover;
+  background: #e8f1ec;
   overflow: hidden;
+}
+.route-map img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
 }
 .route-info {
   display: grid;
@@ -1115,6 +1137,22 @@ main[data-theme="dark"] {
   border: 1px solid color-mix(in srgb, var(--success) 36%, var(--line));
   background: color-mix(in srgb, var(--success) 8%, var(--solid-card));
 }
+.bubble.receipt.receipt-error {
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--line));
+  background: color-mix(in srgb, var(--danger) 8%, var(--solid-card));
+}
+.bubble.receipt.receipt-warning {
+  border-color: color-mix(in srgb, var(--warning) 38%, var(--line));
+  background: color-mix(in srgb, var(--warning) 7%, var(--solid-card));
+}
+.bubble.receipt.receipt-cancelled {
+  border-color: color-mix(in srgb, var(--muted) 35%, var(--line));
+  background: color-mix(in srgb, var(--muted) 7%, var(--solid-card));
+}
+.bubble.receipt.receipt-info {
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--line));
+  background: color-mix(in srgb, var(--accent) 7%, var(--solid-card));
+}
 .bubble.receipt::before {
   position: absolute;
   top: 1px;
@@ -1136,13 +1174,29 @@ main[data-theme="dark"] {
 .receipt-card header i {
   width: 20px;
   height: 20px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
   color: white;
   background: var(--success);
   font-style: normal;
   font-weight: 700;
+  line-height: 1;
+}
+.receipt-card-error header i {
+  background: var(--danger);
+  font-size: 16px;
+  padding-bottom: 1px;
+}
+.receipt-card-warning header i {
+  background: var(--warning);
+}
+.receipt-card-cancelled header i {
+  background: var(--muted);
+}
+.receipt-card-info header i {
+  background: var(--accent);
 }
 .receipt-card header strong {
   font-size: 12px;

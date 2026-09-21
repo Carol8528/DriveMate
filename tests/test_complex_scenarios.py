@@ -215,23 +215,15 @@ class ComplexScenarioTests(unittest.TestCase):
         # 车辆停稳后进入第二段：解锁需要单独确认
         self.assertEqual([p["name"] for p in second["pending_tools"]], ["unlock_door"])
 
-        # 用停车后的最新快照确认：旧授权（基于行驶中快照）失效
+        # 解锁授权应基于停车回执更新后的快照；第二段确认后直接解锁
         third = run_rule(DROPOFF_TEXT, "Robotaxi 乘客", stopped, ex, self.meta, confirmed=True,
                          previous_calls=second["calls"], confirmed_grants=self._grants(second))
-        self.assertEqual([p["name"] for p in third["pending_tools"]], ["unlock_door"])
-        self.assertTrue(third["pending_tools"][0].get("confirmation_invalidated"))
+        self.assertFalse(third["pending_tools"])
         # 已执行的停车步骤不能因再次确认被重放或重新挂起
         stop_steps = [s for s in third["steps"] if s["tool"] == "request_curbside_stop"]
         self.assertEqual(stop_steps[0]["status_raw"], "done")
-        self.assertFalse(any(c["tool"] == "unlock_door" and c["result"] == "success"
-                             for c in third["calls"]))
-
-        # 基于一致的停稳快照再次确认：确定性条件满足，真实解锁
-        fourth = run_rule(DROPOFF_TEXT, "Robotaxi 乘客", stopped, ex, self.meta, confirmed=True,
-                          previous_calls=third["calls"], confirmed_grants=self._grants(third))
         self.assertTrue(any(c["tool"] == "unlock_door" and c["result"] == "success"
-                            for c in fourth["calls"]))
-        self.assertFalse(fourth["pending_tools"])
+                            for c in third["calls"]))
 
     # 场景 4 反转：确认瞬间自行车驶来 → 授权失效且全链重检
     def test_robotaxi_dropoff_bike_arrives_blocks_unlock(self):
@@ -245,18 +237,29 @@ class ComplexScenarioTests(unittest.TestCase):
                           previous_calls=first["calls"], confirmed_grants=self._grants(first))
         self.assertEqual([p["name"] for p in second["pending_tools"]], ["unlock_door"])
 
-        # 先走到“已停稳、待确认解锁”的状态（与反转前夜一致）
+        # 基准路径：状态不变时，第二段确认直接解锁
         third = run_rule(DROPOFF_TEXT, "Robotaxi 乘客", stopped, ex, self.meta, confirmed=True,
                          previous_calls=second["calls"], confirmed_grants=self._grants(second))
-        self.assertTrue(third["pending_tools"][0].get("confirmation_invalidated"))
+        self.assertTrue(any(c["tool"] == "unlock_door" and c["result"] == "success"
+                            for c in third["calls"]))
 
         # 反转：用户按确认的同一秒自行车驶来，最新快照路缘风险 24 → 85。
         # 系统必须拒绝沿用旧授权执行开门。
-        fourth = run_rule(DROPOFF_TEXT, "Robotaxi 乘客", bike, ex, self.meta, confirmed=True,
-                          previous_calls=third["calls"], confirmed_grants=self._grants(third))
+        changed_ex = self._new_run(self.taxi_session, DROPOFF_TEXT, moving)
+        changed_first = run_rule(DROPOFF_TEXT, "Robotaxi 乘客", moving, changed_ex, self.meta)
+        changed_second = run_rule(
+            DROPOFF_TEXT, "Robotaxi 乘客", moving, changed_ex, self.meta, confirmed=True,
+            previous_calls=changed_first["calls"],
+            confirmed_grants=self._grants(changed_first),
+        )
+        changed_third = run_rule(
+            DROPOFF_TEXT, "Robotaxi 乘客", bike, changed_ex, self.meta, confirmed=True,
+            previous_calls=changed_second["calls"],
+            confirmed_grants=self._grants(changed_second),
+        )
         self.assertFalse(any(c["tool"] == "unlock_door" and c["result"] == "success"
-                             for c in fourth["calls"]))
-        invalidated = [p for p in fourth["pending_tools"] if p.get("confirmation_invalidated")]
+                             for c in changed_third["calls"]))
+        invalidated = [p for p in changed_third["pending_tools"] if p.get("confirmation_invalidated")]
         self.assertTrue(invalidated, "状态实质变化后必须重新授权，而不是沿用旧确认")
 
         # 即使基于最新快照再次授权，SafetyGuard 仍按确定性条件硬阻断路缘风险下的解锁

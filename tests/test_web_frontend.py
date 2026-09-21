@@ -34,6 +34,15 @@ class WebFrontendContractTests(unittest.TestCase):
         self.assertIn(">外接模型</button>", self.compact_app)
         self.assertNotIn(">百炼应用</button>", self.compact_app)
 
+    def test_chrome_prefers_locally_installed_microsoft_yahei(self):
+        self.assertIn('@font-face{font-family:"DriveMateYaHei"', self.compact_css)
+        self.assertIn('local("MicrosoftYaHeiUI")', self.compact_css)
+        self.assertIn('local("MicrosoftYaHei")', self.compact_css)
+        self.assertIn(
+            'html,body,#root{font-family:"DriveMateYaHei","MicrosoftYaHeiUI","MicrosoftYaHei",sans-serif;}',
+            self.compact_css,
+        )
+
     def test_route_confirmation_uses_current_plan_context(self):
         self.assertIn('if(item.title)returnitem.title;', self.compact_app)
         self.assertIn('args.preference==="comfort"?"平稳优先":""', self.compact_app)
@@ -44,9 +53,33 @@ class WebFrontendContractTests(unittest.TestCase):
         self.assertIn('`已生成前往${destination||"当前目的地"}的${preference}路线${deadline}`', self.compact_app)
         self.assertNotIn('plan_route:"已生成前往安全休息点的路线"', self.compact_app)
 
+    def test_route_map_keeps_complete_route_visible_at_every_resolution(self):
+        self.assertIn(
+            'alt="从上海虹桥火车站到上海外滩的完整导航路线"',
+            self.compact_app,
+        )
+        self.assertIn(".route-mapimg{", self.compact_css)
+        self.assertIn("object-fit:contain", self.compact_css)
+        self.assertIn("object-position:center", self.compact_css)
+        self.assertIn("aspect-ratio:12/5", self.compact_css)
+        self.assertIn("flex:00auto", self.compact_css)
+        self.assertNotIn(".route-map::before{", self.compact_css)
+        self.assertNotIn(
+            ".route-map{position:relative;min-height:210px;flex:1",
+            self.compact_css,
+        )
+
     def test_confirmation_receipt_and_vehicle_readback_follow_run_evidence(self):
         self.assertIn('failed:["执行未完成，已安全阻断"', self.compact_app)
         self.assertIn('waiting_confirmation:["阶段执行完成，等待下一步确认"', self.compact_app)
+        self.assertIn('["error","cancelled"].includes(tone)?"×"', self.compact_app)
+        self.assertIn('outcome.status==="blocked"?"failed"', self.compact_app)
+        self.assertIn('outcome.status==="advisory"?"advisory"', self.compact_app)
+        self.assertIn('`阻断原因：${uniqueBlockedReasons.join("；")}`', self.compact_app)
+        self.assertIn("step.status_raw||step.status", self.compact_app)
+        self.assertIn("call.summary", self.compact_app)
+        self.assertIn("/上游步骤未成功|等待依赖|waiting_dependency|blocked_dependency/.test(reason)", self.compact_app)
+        self.assertIn(".receipt-card-errorheaderi{background:var(--danger)", self.compact_css)
         self.assertIn('"vehicle_motion.speed_kmh":"speed"', self.compact_app)
         self.assertIn('gear:vehicle.gear', self.compact_app)
 

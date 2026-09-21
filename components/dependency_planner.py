@@ -64,10 +64,26 @@ def _resolve(value: Any, outputs: Dict[str, Dict[str, Any]]) -> Any:
     return value
 
 
+def _apply_verified_state(snapshot: Dict[str, Any], tool: str, result: Dict[str, Any]) -> None:
+    if tool != "request_curbside_stop":
+        return
+    verified = result.get("verified_state")
+    verified = verified if isinstance(verified, dict) else result
+    vehicle = snapshot.setdefault("vehicle_state", {})
+    if not isinstance(vehicle, dict):
+        vehicle = {}
+        snapshot["vehicle_state"] = vehicle
+    if "speed_kmh" in verified:
+        vehicle["speed_kmh"] = verified["speed_kmh"]
+    if "gear" in verified:
+        vehicle["gear"] = verified["gear"]
+
+
 def execute_plan(steps: List[Dict[str, Any]], executor, snapshot: Dict[str, Any], confirmed: bool,
                  tool_meta: Dict[str, Dict[str, Any]], previous_calls: Optional[List[dict]] = None,
                  confirmed_grants: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     ordered = topological_sort(steps)
+    effective_snapshot = deepcopy(snapshot)
     calls = list(previous_calls or []) if confirmed else []
     status_by_id: Dict[str, str] = {}
     outputs: Dict[str, Dict[str, Any]] = {}
@@ -104,7 +120,7 @@ def execute_plan(steps: List[Dict[str, Any]], executor, snapshot: Dict[str, Any]
 
         meta = tool_meta.get(tool, {})
         requires_confirm = bool(meta.get("confirm"))
-        grant = make_grant(tool, resolved_args, snapshot) if requires_confirm else None
+        grant = make_grant(tool, resolved_args, effective_snapshot) if requires_confirm else None
         if requires_confirm and not confirmed:
             step["status"] = "pending_confirm"
             step["confirmation_grant"] = grant
@@ -153,10 +169,11 @@ def execute_plan(steps: List[Dict[str, Any]], executor, snapshot: Dict[str, Any]
             executed_steps.append(step)
             continue
 
-        result, call = executor.execute(tool, resolved_args, snapshot, confirmed=confirmed,
+        result, call = executor.execute(tool, resolved_args, effective_snapshot, confirmed=confirmed,
                                         force_refresh=bool(confirmed and step.get("refresh_on_confirm")))
         calls.append(call)
         if result.get("success"):
+            _apply_verified_state(effective_snapshot, tool, result)
             step["status"] = "done"
             step["note"] = result.get("summary", "")
             status_by_id[sid] = "done"
@@ -179,12 +196,13 @@ def execute_plan(steps: List[Dict[str, Any]], executor, snapshot: Dict[str, Any]
         decision = recovery_decision(tool, result, bool(meta.get("idempotent")), retry_count=0)
 
         if decision["action"] == "retry":
-            retry_result, retry_call = executor.execute(tool, resolved_args, snapshot, confirmed=confirmed,
+            retry_result, retry_call = executor.execute(tool, resolved_args, effective_snapshot, confirmed=confirmed,
                                                         is_retry=True, force_refresh=True)
             calls.append(retry_call)
             replans.append({"failed_tool": tool, "replacement_tool": tool, "fault_type": decision["failure_type"],
                             "policy_id": decision["policy_id"], "reason": decision["reason"], "action": "retry"})
             if retry_result.get("success"):
+                _apply_verified_state(effective_snapshot, tool, retry_result)
                 retry_step = deepcopy(step)
                 retry_step["id"] = sid + "-retry"
                 retry_step["status"] = "degraded"
@@ -200,26 +218,27 @@ def execute_plan(steps: List[Dict[str, Any]], executor, snapshot: Dict[str, Any]
         if decision["action"] == "fallback":
             fb_tool = decision["tool"]
             fb_meta = tool_meta.get(fb_tool, {})
-            fb_args = fallback_arguments(tool, fb_tool, snapshot, result)
+            fb_args = fallback_arguments(tool, fb_tool, effective_snapshot, result)
             fb_id = sid + "-fallback"
             fb_step = {"id": fb_id, "seq": step.get("seq"), "title": "RecoveryMesh 降级：" + fb_tool,
                        "tool": fb_tool, "arguments": fb_args, "depends_on": [], "status": "degraded",
                        "safety_level": fb_meta.get("level", "L0"), "note": decision["reason"], "replaces": sid}
             if fb_meta.get("confirm") and not confirmed:
                 fb_step["status"] = "pending_confirm"
-                fb_grant = make_grant(fb_tool, fb_args, snapshot)
+                fb_grant = make_grant(fb_tool, fb_args, effective_snapshot)
                 fb_step["confirmation_grant"] = fb_grant
                 pending.append({"name": fb_tool, "title": fb_step.get("title", ""),
                                 "arguments": fb_args, "step_id": fb_id, "depends_on": [],
                                 "safety_level": fb_meta.get("level", "L0"), **fb_grant})
                 executed_steps.append(fb_step)
             else:
-                fb_result, fb_call = executor.execute(fb_tool, fb_args, snapshot, confirmed=confirmed)
+                fb_result, fb_call = executor.execute(fb_tool, fb_args, effective_snapshot, confirmed=confirmed)
                 calls.append(fb_call)
                 fb_step["status"] = "degraded" if fb_result.get("success") else "failed"
                 fb_step["note"] = (decision["reason"] + "；" + fb_result.get("summary", "")).strip("；")
                 executed_steps.append(fb_step)
                 if fb_result.get("success"):
+                    _apply_verified_state(effective_snapshot, fb_tool, fb_result)
                     status_by_id[sid] = "degraded"
                     outputs[sid] = fb_result
             replans.append({"failed_tool": tool, "replacement_tool": fb_tool, "fault_type": decision["failure_type"],
