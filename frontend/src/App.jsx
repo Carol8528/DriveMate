@@ -197,7 +197,7 @@ function executionReceipt(data) {
     "schema_invalid",
     "unauthorized",
   ]);
-  const blockedReasons = [
+  const concreteBlockedReasons = [
     ...(data.steps || [])
       .filter((step) =>
         failedStatuses.has(step.status_raw || step.status),
@@ -210,20 +210,37 @@ function executionReceipt(data) {
         ) {
           return "";
         }
-        return reason
-          ? `${step.title || step.tool || "执行步骤"}：${reason}`
-          : step.title || step.tool;
+        return reason || step.title || step.tool;
       }),
     ...(data.calls || [])
       .filter((call) =>
         failedStatuses.has(call.result || call.status),
       )
       .map((call) => call.summary),
-    ...((data.constraint_shield?.candidates || [])
-      .flatMap((candidate) => candidate.hard_violations || [])),
     data.error?.message,
   ].filter(Boolean);
-  const uniqueBlockedReasons = [...new Set(blockedReasons)].slice(0, 3);
+  const policyBlockedReasons = (data.constraint_shield?.candidates || [])
+    .flatMap((candidate) => candidate.hard_violations || [])
+    .filter(Boolean);
+  const comparableReason = (reason) =>
+    String(reason).replace(/[，。；：:、\s]/g, "");
+  const uniqueBlockedReasons = (
+    concreteBlockedReasons.length ? concreteBlockedReasons : policyBlockedReasons
+  ).reduce((reasons, reason) => {
+    const normalized = comparableReason(reason);
+    if (
+      !normalized ||
+      reasons.some((current) => {
+        const existing = comparableReason(current);
+        return existing === normalized ||
+          existing.includes(normalized) ||
+          normalized.includes(existing);
+      })
+    ) {
+      return reasons;
+    }
+    return [...reasons, String(reason).trim()];
+  }, []).slice(0, 3);
   const outcome = data.action_outcome || {};
   const rawStatus = data.run_status || outcome.status;
   const status = rawStatus === "cancelled"

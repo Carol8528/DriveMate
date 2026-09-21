@@ -79,6 +79,11 @@ class WebFrontendContractTests(unittest.TestCase):
         self.assertIn("step.status_raw||step.status", self.compact_app)
         self.assertIn("call.summary", self.compact_app)
         self.assertIn("/上游步骤未成功|等待依赖|waiting_dependency|blocked_dependency/.test(reason)", self.compact_app)
+        self.assertIn(
+            "concreteBlockedReasons.length?concreteBlockedReasons:policyBlockedReasons",
+            self.compact_app,
+        )
+        self.assertIn("existing.includes(normalized)||normalized.includes(existing)", self.compact_app)
         self.assertIn(".receipt-card-errorheaderi{background:var(--danger)", self.compact_css)
         self.assertIn('"vehicle_motion.speed_kmh":"speed"', self.compact_app)
         self.assertIn('gear:vehicle.gear', self.compact_app)
